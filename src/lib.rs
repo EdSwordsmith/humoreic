@@ -38,5 +38,5 @@ pub fn create_guild(conn: &PgConnection, guild_id: i64, channel_id: i64) -> Guil
     diesel::insert_into(guilds::table)
         .values(&new_guild)
         .get_result(conn)
-        .expect("Bruh")
+        .expect("This is fine")
 }
