@@ -1,6 +1,6 @@
 table! {
     guilds (id) {
-        id -> Int4,
-        channel_id -> Int4,
+        id -> Int8,
+        channel_id -> Int8,
     }
 }

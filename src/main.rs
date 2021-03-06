@@ -1,3 +1,8 @@
+use humoreic::create_guild;
+use humoreic::PgPool;
+use humoreic::establish_connection;
+use diesel::PgConnection;
+use dotenv::dotenv;
 use std::env;
 
 use serenity::{
@@ -15,6 +20,11 @@ use serenity::framework::standard::{
     }
 };
 
+struct DBConnection;
+impl TypeMapKey for DBConnection {
+    type Value = PgPool;
+}
+
 #[group]
 #[commands(ping, setup)]
 struct General;
@@ -30,6 +40,8 @@ impl EventHandler for Handler {
 
 #[tokio::main]
 async fn main() {
+    dotenv().ok();
+
     let framework = StandardFramework::new()
         .configure(|c| c.prefix("☭"))
         .group(&GENERAL_GROUP);
@@ -42,6 +54,11 @@ async fn main() {
         .framework(framework)
         .await
         .expect("Error creating client");
+
+    {
+        let mut data = client.data.write().await;
+        data.insert::<DBConnection>(establish_connection());
+    }
 
     if let Err(why) = client.start().await {
         println!("Client error: {:?}", why);
@@ -60,6 +77,13 @@ async fn ping(ctx: &Context, msg: &Message) -> CommandResult {
 
 #[command]
 async fn setup(ctx: &Context, msg: &Message) -> CommandResult {
-    msg.reply(ctx, "Ainda não funfa").await?;
+    let data = ctx.data.read().await;
+    let pool = data.get::<DBConnection>().unwrap();
+    let conn = pool.get().unwrap();
+
+    if let Some(guild_id) = msg.guild_id {
+        create_guild(&conn, *guild_id.as_u64() as i64, *msg.channel_id.as_u64() as i64);
+    }
+
     Ok(())
 }

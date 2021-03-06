@@ -9,5 +9,5 @@ edition = "2018"
 [dependencies]
 serenity = { version = "0.10.4", default-features = false, features = ["client", "gateway", "rustls_backend", "model", "standard_framework"] }
 tokio = { version = "1.0", features = ["macros", "rt-multi-thread"] }
-diesel = { version = "1.4.4", features = ["postgres"] }
+diesel = { version = "1.4.4", features = ["postgres", "r2d2"] }
 dotenv = "0.15.0"

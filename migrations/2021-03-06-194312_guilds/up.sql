@@ -1,4 +1,4 @@
 CREATE TABLE guilds (
-	id INTEGER PRIMARY KEY,
-	channel_id INTEGER NOT NULL
+	id BIGINT PRIMARY KEY,
+	channel_id BIGINT NOT NULL
 );
