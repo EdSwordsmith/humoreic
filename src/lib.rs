@@ -6,6 +6,7 @@ use diesel::pg::PgConnection;
 use diesel::r2d2::{ Pool, PooledConnection, ConnectionManager, PoolError };
 use dotenv::dotenv;
 use std::env;
+use crate::diesel::*;
 
 pub mod schema;
 pub mod models;
@@ -28,7 +29,6 @@ pub fn establish_connection() -> PgPool {
 
 pub fn create_guild(conn: &PgConnection, guild_id: i64, channel_id: i64) -> Guild {
     use schema::guilds;
-    use crate::diesel::RunQueryDsl;
 
     let new_guild = Guild {
         id: guild_id,
@@ -39,4 +39,17 @@ pub fn create_guild(conn: &PgConnection, guild_id: i64, channel_id: i64) -> Guil
         .values(&new_guild)
         .get_result(conn)
         .expect("Bruh")
+}
+
+pub fn get_guild(conn: &PgConnection, guild_id: i64) -> Guild {
+    use schema::guilds::dsl::*;
+
+    guilds.filter(id.eq(guild_id)).first(conn).expect("Bruh 2.0")
+}
+
+pub fn get_guilds(conn: &PgConnection) -> Vec<Guild> {
+    use schema::guilds::dsl::*;
+
+    guilds.load::<Guild>(conn)
+        .expect("Error loading guilds")
 }

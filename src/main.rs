@@ -1,15 +1,10 @@
-use humoreic::create_guild;
+use humoreic::{create_guild, get_guild, get_guilds};
 use humoreic::PgPool;
 use humoreic::establish_connection;
-use diesel::PgConnection;
 use dotenv::dotenv;
 use std::env;
 
-use serenity::{
-    async_trait,
-    model::{channel::Message, gateway::Ready},
-    prelude::*,
-};
+use serenity::{async_trait, model::{channel::Message, gateway::Ready, id::ChannelId}, prelude::*};
 
 use serenity::framework::standard::{
     StandardFramework,
@@ -35,6 +30,24 @@ struct Handler;
 impl EventHandler for Handler {
     async fn ready(&self, _: Context, ready: Ready) {
         println!("{} is connected!", ready.user.name);
+    }
+
+    async fn message(&self, _ctx: Context, _new_message: Message) {
+        let data = _ctx.data.read().await;
+        let pool = data.get::<DBConnection>().unwrap();
+        let conn = pool.get().unwrap();
+
+        if !_new_message.author.bot && 
+            get_guild(&conn, *_new_message.guild_id.unwrap().as_u64() as i64)
+                .channel_id == *_new_message.channel_id.as_u64() as i64 {
+            let guilds = get_guilds(&conn);
+            for g in guilds {
+                if g.id != *_new_message.guild_id.unwrap().as_u64() as i64 {
+                    ChannelId(g.channel_id as u64)
+                    .say(&_ctx.http, &_new_message.content).await;
+                }
+            }
+        }
     }
 }
 
