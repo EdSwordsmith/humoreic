@@ -180,12 +180,14 @@ async fn setup(ctx: &Context, msg: &Message) -> CommandResult {
     let pool = data.get::<DBConnection>().unwrap();
     let conn = pool.get().unwrap();
 
-    if let Some(guild_id) = msg.guild_id {
-        create_guild(
-            &conn,
-            *guild_id.as_u64() as i64,
-            *msg.channel_id.as_u64() as i64,
-        );
+    if is_admin(&conn, *msg.author.id.as_u64() as i64) {
+        if let Some(guild_id) = msg.guild_id {
+            create_guild(
+                &conn,
+                *guild_id.as_u64() as i64,
+                *msg.channel_id.as_u64() as i64,
+            );
+        }
     }
 
     Ok(())
