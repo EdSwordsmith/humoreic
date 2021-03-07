@@ -20,9 +20,15 @@ table! {
 table! {
     messages (id) {
         id -> Int8,
-        others -> Jsonb,
+        embed_ids -> Jsonb,
+        msg_ids -> Jsonb,
         reactions -> Jsonb,
     }
 }
 
-allow_tables_to_appear_in_same_query!(admins, bans, guilds, messages,);
+allow_tables_to_appear_in_same_query!(
+    admins,
+    bans,
+    guilds,
+    messages,
+);

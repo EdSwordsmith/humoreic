@@ -1,3 +1,4 @@
+use humoreic::create_message;
 use dotenv::dotenv;
 use humoreic::create_admin;
 use humoreic::create_ban;
@@ -61,6 +62,8 @@ impl EventHandler for Handler {
             }
 
             let guilds = get_guilds(&conn);
+            let mut embed_ids = Vec::new();
+            let mut msg_ids = Vec::new();
 
             for g in guilds {
                 let image_regex =
@@ -98,14 +101,18 @@ impl EventHandler for Handler {
                     .await
                 {
                     Err(_) => println!("wtf are u doing"),
-                    _ => (),
+                    Ok(message) => {
+                        embed_ids.push(*message.id.as_u64() as i64);
+                    },
                 };
 
                 for attachment in msg.attachments.clone() {
                     if channel_id != *channel.as_u64() as i64 {
                         match channel.say(&ctx.http, attachment.url).await {
                             Err(_) => println!("brah learn to write Rust"),
-                            _ => (),
+                            Ok(message) => {
+                                msg_ids.push(*message.id.as_u64() as i64);
+                            },
                         };
                     }
                 }
@@ -118,7 +125,11 @@ impl EventHandler for Handler {
                     Err(_) => println!("wtf bro"),
                     _ => (),
                 };
+            } else {
+                msg_ids.push(*msg.id.as_u64() as i64);
             }
+
+            create_message(&conn, embed_ids, msg_ids);
         }
     }
 }

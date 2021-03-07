@@ -9,11 +9,19 @@ pub struct Guild {
     pub channel_id: i64,
 }
 
-#[derive(Queryable, Insertable)]
-#[table_name = "messages"]
+#[derive(Queryable)]
 pub struct SavedMessage {
     pub id: i64,
-    pub others: serde_json::Value,
+    pub embed_ids: serde_json::Value,
+    pub msg_ids: serde_json::Value,
+    pub reactions: serde_json::Value,
+}
+
+#[derive(Insertable)]
+#[table_name = "messages"]
+pub struct NewMessage {
+    pub embed_ids: serde_json::Value,
+    pub msg_ids: serde_json::Value,
     pub reactions: serde_json::Value,
 }
 

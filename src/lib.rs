@@ -1,12 +1,15 @@
 #[macro_use]
 extern crate diesel;
 
+use diesel::sql_types::BigInt;
+use diesel::sql_types::Integer;
 use crate::diesel::*;
 use crate::models::*;
 use diesel::pg::PgConnection;
 use diesel::r2d2::{ConnectionManager, Pool, PoolError, PooledConnection};
 use dotenv::dotenv;
 use std::env;
+use serde_json::json;
 
 pub mod models;
 pub mod schema;
@@ -98,4 +101,27 @@ pub fn rm_ban(conn: &PgConnection, user_id: i64) {
     diesel::delete(bans.filter(id.eq(user_id)))
         .execute(conn)
         .expect("This is fine");
+}
+
+pub fn create_message(conn: &PgConnection, embed_ids: Vec<i64>, msg_ids: Vec<i64>) -> SavedMessage {
+    use schema::messages;
+
+    let new_message = NewMessage {
+        embed_ids: json!(embed_ids),
+        msg_ids: json!(msg_ids),
+        reactions: json!({}),
+    };
+
+    diesel::insert_into(messages::table)
+        .values(&new_message)
+        .get_result(conn)
+        .expect("This is fine")
+}
+
+pub fn find_message(conn: &PgConnection, id: i64) -> SavedMessage {
+    diesel::sql_query("SELECT * FROM messages WHERE messages.embed_ids @> ? OR messages.msg_ids @> ?")
+        .bind::<BigInt, i64>(id)
+        .bind::<BigInt, i64>(id)
+        .first(conn)
+        .expect("This is fine")
 }

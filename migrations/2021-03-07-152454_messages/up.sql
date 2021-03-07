@@ -1,5 +1,6 @@
 CREATE TABLE messages (
-	id BIGINT PRIMARY KEY,
-    others JSONB NOT NULL,
+	id BIGSERIAL PRIMARY KEY,
+    embed_ids JSONB NOT NULL,
+    msg_ids JSONB NOT NULL,
     reactions JSONB NOT NULL
 );
