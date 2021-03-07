@@ -32,21 +32,47 @@ impl EventHandler for Handler {
         println!("{} is connected!", ready.user.name);
     }
 
-    async fn message(&self, _ctx: Context, _new_message: Message) {
-        let data = _ctx.data.read().await;
+    async fn message(&self, ctx: Context, msg: Message) {
+        let data = ctx.data.read().await;
         let pool = data.get::<DBConnection>().unwrap();
         let conn = pool.get().unwrap();
 
-        if !_new_message.author.bot && 
-            get_guild(&conn, *_new_message.guild_id.unwrap().as_u64() as i64)
-                .channel_id == *_new_message.channel_id.as_u64() as i64 {
+        let guild_id = *msg.guild_id.unwrap().as_u64() as i64;
+        let guild_data = get_guild(&conn, guild_id);
+        let channel_id = *msg.channel_id.as_u64() as i64;
+
+        let guild = msg.guild(&ctx.cache).await.unwrap();
+
+        if !msg.author.bot && guild_data.channel_id == channel_id {
             let guilds = get_guilds(&conn);
             for g in guilds {
-                if g.id != *_new_message.guild_id.unwrap().as_u64() as i64 {
-                    ChannelId(g.channel_id as u64)
-                    .say(&_ctx.http, &_new_message.content).await;
-                }
+                // ChannelId(g.channel_id as u64).say(&ctx.http, &msg.content).await;
+                let channel = ChannelId(g.channel_id as u64);
+                channel.send_message(&ctx.http, |m| {
+                    m.embed(|e| {
+                        e.description(&msg.content);
+
+                        e.author(|a| {
+                            a.name(&msg.author.name);
+                            a.icon_url(&msg.author.face());
+
+                            a
+                        });
+
+                        e.footer(|f| {
+                            f.text(&guild.name);
+
+                            f
+                        });
+                        
+                        e
+                    });
+                    m
+                }).await;
             }
+
+            // Apagar mensagem depois de enviar a todos os servers
+            msg.delete(&ctx.http).await;
         }
     }
 }
