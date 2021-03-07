@@ -52,7 +52,7 @@ impl EventHandler for Handler {
                 let image_regex = Regex::new(r"(http(s?)://)([/|.|\w|\s|-])*\.(?:jpg|gif|png)").unwrap();
 
                 let channel = ChannelId(g.channel_id as u64);
-                channel.send_message(&ctx.http, |m| {
+                match channel.send_message(&ctx.http, |m| {
                     m.embed(|e| {
                         if image_regex.is_match(&msg.content) {
                             e.image(&msg.content);
@@ -78,18 +78,28 @@ impl EventHandler for Handler {
                     });
                     
                     m
-                }).await;
+                }).await {
+                    Err(_) => println!("wtf are u doing"),
+                    _ => ()
+                };
 
                 for attachment in msg.attachments.clone() {
                     if channel_id != *channel.as_u64() as i64 {
-                        channel.say(&ctx.http, attachment.url).await;
+                        match channel.say(&ctx.http, attachment.url).await {
+                            Err(_) => println!("brah learn to write Rust"),
+                            _ => ()
+                        };
                     }
                 }
             }
 
             // Apagar mensagem depois de enviar a todos os servers
+            // Caso não tenha enviado imagens/videos
             if msg.attachments.len() == 0 {
-                msg.delete(&ctx.http).await;
+                match msg.delete(&ctx.http).await {
+                    Err(_) => println!("wtf bro"),
+                    _ => ()
+                };
             }
         }
     }
