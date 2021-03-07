@@ -42,6 +42,7 @@ impl EventHandler for Handler {
         let channel_id = *msg.channel_id.as_u64() as i64;
 
         let guild = msg.guild(&ctx.cache).await.unwrap();
+        let guild_icon = guild.icon_url().unwrap();
 
         if !msg.author.bot && guild_data.channel_id == channel_id {
             let guilds = get_guilds(&conn);
@@ -61,6 +62,7 @@ impl EventHandler for Handler {
 
                         e.footer(|f| {
                             f.text(&guild.name);
+                            f.icon_url(&guild_icon);
 
                             f
                         });
