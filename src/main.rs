@@ -11,6 +11,7 @@ use humoreic::{create_guild, get_guild, get_guilds, find_message};
 use regex::Regex;
 use std::env;
 use std::collections::HashMap;
+use serenity::builder::CreateEmbed;
 
 use serenity::{
     async_trait,
@@ -50,10 +51,19 @@ impl EventHandler for Handler {
         let r = reaction.emoji.to_string();
 
         for m in messages {
-            let embeds = m.embed_ids.as_object();
-            
+            let embeds = m.embed_ids.as_object().unwrap();
+
             for g in &guilds {
-                
+                let message_id = embeds.get(&g.id.to_string()).unwrap().as_u64().unwrap();
+                let channel = ChannelId(g.channel_id as u64);
+                let mut msg = channel.message(&ctx.http, message_id).await.expect("Work bitch!");
+                let mut embed = CreateEmbed::from(msg.embeds.remove(0));
+                embed.title("AHAHHAHAHAHHAH get pranked!");
+
+                channel.edit_message(&ctx.http, message_id, |edit| edit.embed(|e| {
+                    *e = embed;
+                    e
+                })).await;
             }
         }
     }
