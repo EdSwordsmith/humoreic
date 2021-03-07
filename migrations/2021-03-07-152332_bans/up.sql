@@ -1,0 +1,3 @@
+CREATE TABLE bans (
+	id BIGINT PRIMARY KEY
+);
