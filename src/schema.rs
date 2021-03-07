@@ -25,9 +25,4 @@ table! {
     }
 }
 
-allow_tables_to_appear_in_same_query!(
-    admins,
-    bans,
-    guilds,
-    messages,
-);
+allow_tables_to_appear_in_same_query!(admins, bans, guilds, messages,);

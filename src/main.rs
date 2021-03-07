@@ -1,19 +1,24 @@
-use humoreic::{create_guild, get_guild, get_guilds};
-use humoreic::PgPool;
-use humoreic::establish_connection;
 use dotenv::dotenv;
-use std::env;
+use humoreic::create_admin;
+use humoreic::create_ban;
+use humoreic::establish_connection;
+use humoreic::is_admin;
+use humoreic::is_banned;
+use humoreic::rm_ban;
+use humoreic::PgPool;
+use humoreic::{create_guild, get_guild, get_guilds};
 use regex::Regex;
+use std::env;
 
-use serenity::{async_trait, model::{channel::Message, gateway::Ready, id::ChannelId}, prelude::*};
+use serenity::{
+    async_trait,
+    model::{channel::Message, gateway::Ready, id::ChannelId},
+    prelude::*,
+};
 
 use serenity::framework::standard::{
-    StandardFramework,
-    CommandResult,
-    macros::{
-        command,
-        group
-    }
+    macros::{command, group},
+    CommandResult, StandardFramework,
 };
 
 struct DBConnection;
@@ -22,7 +27,7 @@ impl TypeMapKey for DBConnection {
 }
 
 #[group]
-#[commands(ping, setup)]
+#[commands(ping, setup, admin, addadmin, ban, unban)]
 struct General;
 
 struct Handler;
@@ -44,50 +49,55 @@ impl EventHandler for Handler {
 
         let guild = msg.guild(&ctx.cache).await.unwrap();
         let guild_icon = guild.icon_url().unwrap();
+        let banned = is_banned(&conn, *msg.author.id.as_u64() as i64);
 
-        if !msg.author.bot && guild_data.channel_id == channel_id {
+        if !banned && !msg.author.bot && guild_data.channel_id == channel_id {
             let guilds = get_guilds(&conn);
 
             for g in guilds {
-                let image_regex = Regex::new(r"(http(s?)://)([/|.|\w|\s|-])*\.(?:jpg|gif|png)").unwrap();
+                let image_regex =
+                    Regex::new(r"(http(s?)://)([/|.|\w|\s|-])*\.(?:jpg|gif|png)").unwrap();
 
                 let channel = ChannelId(g.channel_id as u64);
-                match channel.send_message(&ctx.http, |m| {
-                    m.embed(|e| {
-                        if image_regex.is_match(&msg.content) {
-                            e.image(&msg.content);
-                        } else {
-                            e.description(&msg.content);
-                        }
+                match channel
+                    .send_message(&ctx.http, |m| {
+                        m.embed(|e| {
+                            if image_regex.is_match(&msg.content) {
+                                e.image(&msg.content);
+                            } else {
+                                e.description(&msg.content);
+                            }
 
-                        e.author(|a| {
-                            a.name(&msg.author.name);
-                            a.icon_url(&msg.author.face());
+                            e.author(|a| {
+                                a.name(&msg.author.name);
+                                a.icon_url(&msg.author.face());
 
-                            a
+                                a
+                            });
+
+                            e.footer(|f| {
+                                f.text(&guild.name);
+                                f.icon_url(&guild_icon);
+
+                                f
+                            });
+
+                            e
                         });
 
-                        e.footer(|f| {
-                            f.text(&guild.name);
-                            f.icon_url(&guild_icon);
-
-                            f
-                        });
-                        
-                        e
-                    });
-                    
-                    m
-                }).await {
+                        m
+                    })
+                    .await
+                {
                     Err(_) => println!("wtf are u doing"),
-                    _ => ()
+                    _ => (),
                 };
 
                 for attachment in msg.attachments.clone() {
                     if channel_id != *channel.as_u64() as i64 {
                         match channel.say(&ctx.http, attachment.url).await {
                             Err(_) => println!("brah learn to write Rust"),
-                            _ => ()
+                            _ => (),
                         };
                     }
                 }
@@ -98,7 +108,7 @@ impl EventHandler for Handler {
             if msg.attachments.len() == 0 {
                 match msg.delete(&ctx.http).await {
                     Err(_) => println!("wtf bro"),
-                    _ => ()
+                    _ => (),
                 };
             }
         }
@@ -113,8 +123,7 @@ async fn main() {
         .configure(|c| c.prefix("☭"))
         .group(&GENERAL_GROUP);
 
-    let token = env::var("DISCORD_TOKEN")
-        .expect("Expected a token in the environment");
+    let token = env::var("DISCORD_TOKEN").expect("Expected a token in the environment");
 
     let mut client = Client::builder(&token)
         .event_handler(Handler)
@@ -134,11 +143,15 @@ async fn main() {
 
 #[command]
 async fn ping(ctx: &Context, msg: &Message) -> CommandResult {
-    msg.reply(ctx, "Não quero saber! 0.75 para ti!\n".to_owned() +
-        "https://scontent.flis6-1.fna.fbcdn.net/v/t1.0-9/70961516_2959" +
-        "708937378994_4689648200359870464_o.jpg?_nc_cat=111&ccb=1-3&_nc_sid" +
-        "=825194&_nc_ohc=D4Gg4D4CrvcAX-9A812&_nc_ht=scontent.flis6-1.fna&oh=" +
-        "af2a5651c2bc4c2e55affee070113262&oe=6068A3E0").await?;
+    msg.reply(
+        ctx,
+        "Não quero saber! 0.75 para ti!\n".to_owned()
+            + "https://scontent.flis6-1.fna.fbcdn.net/v/t1.0-9/70961516_2959"
+            + "708937378994_4689648200359870464_o.jpg?_nc_cat=111&ccb=1-3&_nc_sid"
+            + "=825194&_nc_ohc=D4Gg4D4CrvcAX-9A812&_nc_ht=scontent.flis6-1.fna&oh="
+            + "af2a5651c2bc4c2e55affee070113262&oe=6068A3E0",
+    )
+    .await?;
     Ok(())
 }
 
@@ -149,7 +162,71 @@ async fn setup(ctx: &Context, msg: &Message) -> CommandResult {
     let conn = pool.get().unwrap();
 
     if let Some(guild_id) = msg.guild_id {
-        create_guild(&conn, *guild_id.as_u64() as i64, *msg.channel_id.as_u64() as i64);
+        create_guild(
+            &conn,
+            *guild_id.as_u64() as i64,
+            *msg.channel_id.as_u64() as i64,
+        );
+    }
+
+    Ok(())
+}
+
+#[command]
+async fn admin(ctx: &Context, msg: &Message) -> CommandResult {
+    let data = ctx.data.read().await;
+    let pool = data.get::<DBConnection>().unwrap();
+    let conn = pool.get().unwrap();
+
+    if is_admin(&conn, *msg.author.id.as_u64() as i64) {
+        msg.reply(&ctx, "Ya bro, you an admin!").await;
+    } else {
+        msg.reply(&ctx, "Fuck off, bro!").await;
+    }
+
+    Ok(())
+}
+
+#[command]
+async fn addadmin(ctx: &Context, msg: &Message) -> CommandResult {
+    let data = ctx.data.read().await;
+    let pool = data.get::<DBConnection>().unwrap();
+    let conn = pool.get().unwrap();
+
+    if is_admin(&conn, *msg.author.id.as_u64() as i64) {
+        for mention in msg.mentions.iter() {
+            create_admin(&conn, *mention.id.as_u64() as i64);
+        }
+    }
+
+    Ok(())
+}
+
+#[command]
+async fn ban(ctx: &Context, msg: &Message) -> CommandResult {
+    let data = ctx.data.read().await;
+    let pool = data.get::<DBConnection>().unwrap();
+    let conn = pool.get().unwrap();
+
+    if is_admin(&conn, *msg.author.id.as_u64() as i64) {
+        for mention in msg.mentions.iter() {
+            create_ban(&conn, *mention.id.as_u64() as i64);
+        }
+    }
+
+    Ok(())
+}
+
+#[command]
+async fn unban(ctx: &Context, msg: &Message) -> CommandResult {
+    let data = ctx.data.read().await;
+    let pool = data.get::<DBConnection>().unwrap();
+    let conn = pool.get().unwrap();
+
+    if is_admin(&conn, *msg.author.id.as_u64() as i64) {
+        for mention in msg.mentions.iter() {
+            rm_ban(&conn, *mention.id.as_u64() as i64);
+        }
     }
 
     Ok(())
