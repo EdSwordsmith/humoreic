@@ -46,8 +46,15 @@ impl EventHandler for Handler {
         let conn = pool.get().unwrap();
 
         let messages = find_message(&conn, *reaction.message_id.as_u64() as i64, *reaction.guild_id.unwrap().as_u64() as i64);
+        let guilds = get_guilds(&conn);
+        let r = reaction.emoji.to_string();
+
         for m in messages {
-            println!("{} {}", m.id, reaction.emoji.to_string());
+            let embeds = m.embed_ids.as_object();
+            
+            for g in &guilds {
+                
+            }
         }
     }
 
@@ -57,6 +64,7 @@ impl EventHandler for Handler {
         let conn = pool.get().unwrap();
 
         let messages = find_message(&conn, *reaction.message_id.as_u64() as i64, *reaction.guild_id.unwrap().as_u64() as i64);
+
         for m in messages {
             println!("{}", m.id);
         }
@@ -91,6 +99,7 @@ impl EventHandler for Handler {
             for g in guilds {
                 let image_regex = Regex::new(r"((http(s?)://)([/|.|\w|\s|-])*\.(?:jpg|gif|png))").unwrap();
                 let tenor_regex = Regex::new(r"(http(s?)://)((tenor\.com.*)|(media\.giphy\.com.*)|(gph\.is.*))").unwrap();
+                let video_regex = Regex::new(r"((http(s?)://)([/|.|\w|\s|-])*\.(?:mp4|webm))").unwrap();
 
                 let channel = ChannelId(g.channel_id as u64);
                 match channel
@@ -129,7 +138,7 @@ impl EventHandler for Handler {
                     },
                 };
 
-                if tenor_regex.is_match(&msg.content) {
+                if tenor_regex.is_match(&msg.content) || video_regex.is_match(&msg.content) {
                     match channel.say(&ctx.http, &msg.content).await {
                         Err(_) => println!("brah learn to write Rust"),
                         Ok(message) => {
