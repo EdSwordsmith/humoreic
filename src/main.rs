@@ -3,6 +3,7 @@ use humoreic::PgPool;
 use humoreic::establish_connection;
 use dotenv::dotenv;
 use std::env;
+use regex::Regex;
 
 use serenity::{async_trait, model::{channel::Message, gateway::Ready, id::ChannelId}, prelude::*};
 
@@ -46,12 +47,18 @@ impl EventHandler for Handler {
 
         if !msg.author.bot && guild_data.channel_id == channel_id {
             let guilds = get_guilds(&conn);
+
             for g in guilds {
-                // ChannelId(g.channel_id as u64).say(&ctx.http, &msg.content).await;
+                let image_regex = Regex::new(r"(http(s?)://)([/|.|\w|\s|-])*\.(?:jpg|gif|png)").unwrap();
+
                 let channel = ChannelId(g.channel_id as u64);
                 channel.send_message(&ctx.http, |m| {
                     m.embed(|e| {
-                        e.description(&msg.content);
+                        if image_regex.is_match(&msg.content) {
+                            e.image(&msg.content);
+                        } else {
+                            e.description(&msg.content);
+                        }
 
                         e.author(|a| {
                             a.name(&msg.author.name);
@@ -69,12 +76,21 @@ impl EventHandler for Handler {
                         
                         e
                     });
+                    
                     m
                 }).await;
+
+                for attachment in msg.attachments.clone() {
+                    if channel_id != *channel.as_u64() as i64 {
+                        channel.say(&ctx.http, attachment.url).await;
+                    }
+                }
             }
 
             // Apagar mensagem depois de enviar a todos os servers
-            msg.delete(&ctx.http).await;
+            if msg.attachments.len() == 0 {
+                msg.delete(&ctx.http).await;
+            }
         }
     }
 }
