@@ -1,4 +1,4 @@
-use humoreic::create_message;
+use humoreic::{create_message, schema::messages::reactions};
 use dotenv::dotenv;
 use humoreic::create_admin;
 use humoreic::create_ban;
@@ -7,13 +7,13 @@ use humoreic::is_admin;
 use humoreic::is_banned;
 use humoreic::rm_ban;
 use humoreic::PgPool;
-use humoreic::{create_guild, get_guild, get_guilds};
+use humoreic::{create_guild, get_guild, get_guilds, find_message};
 use regex::Regex;
 use std::env;
 
 use serenity::{
     async_trait,
-    model::{channel::Message, gateway::Ready, id::ChannelId},
+    model::{channel::{Message, Reaction}, gateway::Ready, id::ChannelId},
     prelude::*,
 };
 
@@ -37,6 +37,17 @@ struct Handler;
 impl EventHandler for Handler {
     async fn ready(&self, _: Context, ready: Ready) {
         println!("{} is connected!", ready.user.name);
+    }
+
+    async fn reaction_add(&self, ctx: Context, reaction: Reaction) {
+        let data = ctx.data.read().await;
+        let pool = data.get::<DBConnection>().unwrap();
+        let conn = pool.get().unwrap();
+
+        let messages = find_message(&conn, *reaction.message_id.as_u64() as i64);
+        for m in messages {
+            println!("{}", m.id);
+        }
     }
 
     async fn message(&self, ctx: Context, msg: Message) {
