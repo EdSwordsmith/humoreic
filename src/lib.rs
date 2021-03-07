@@ -8,6 +8,7 @@ use diesel::r2d2::{ConnectionManager, Pool, PoolError, PooledConnection};
 use dotenv::dotenv;
 use std::env;
 use serde_json::json;
+use std::collections::HashMap;
 
 pub mod models;
 pub mod schema;
@@ -41,10 +42,10 @@ pub fn create_guild(conn: &PgConnection, guild_id: i64, channel_id: i64) -> Guil
         .expect("This is fine")
 }
 
-pub fn get_guild(conn: &PgConnection, id: i64) -> Guild {
+pub fn get_guild(conn: &PgConnection, guild_id: i64) -> Guild {
     use schema::guilds::dsl::*;
 
-    guilds.find(id).first(conn).expect("Bruh 2.0")
+    guilds.find(guild_id).first(conn).expect("Bruh 2.0")
 }
 
 pub fn get_guilds(conn: &PgConnection) -> Vec<Guild> {
@@ -101,7 +102,7 @@ pub fn rm_ban(conn: &PgConnection, user_id: i64) {
         .expect("This is fine");
 }
 
-pub fn create_message(conn: &PgConnection, embed_ids: Vec<i64>, msg_ids: Vec<i64>) -> SavedMessage {
+pub fn create_message(conn: &PgConnection, embed_ids: HashMap<i64, i64>, msg_ids: HashMap<i64,i64>) -> SavedMessage {
     use schema::messages;
 
     let new_message = NewMessage {
@@ -116,9 +117,9 @@ pub fn create_message(conn: &PgConnection, embed_ids: Vec<i64>, msg_ids: Vec<i64
         .expect("This is fine")
 }
 
-pub fn find_message(conn: &PgConnection, id: i64) -> Vec<SavedMessage> {
+pub fn find_message(conn: &PgConnection, id: i64, guild_id: i64) -> Vec<SavedMessage> {
     diesel::sql_query(
-        format!("SELECT * FROM messages WHERE messages.embed_ids @> '{}' OR messages.msg_ids @> '{}'", id, id))
+        format!("SELECT * FROM messages WHERE messages.embed_ids->'{}' @> '{}' OR messages.msg_ids->'{}' @> '{}'", guild_id, id, guild_id, id))
         .get_results::<SavedMessage>(conn)
         .expect("...")
 }

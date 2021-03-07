@@ -10,6 +10,7 @@ use humoreic::PgPool;
 use humoreic::{create_guild, get_guild, get_guilds, find_message};
 use regex::Regex;
 use std::env;
+use std::collections::HashMap;
 
 use serenity::{
     async_trait,
@@ -44,7 +45,18 @@ impl EventHandler for Handler {
         let pool = data.get::<DBConnection>().unwrap();
         let conn = pool.get().unwrap();
 
-        let messages = find_message(&conn, *reaction.message_id.as_u64() as i64);
+        let messages = find_message(&conn, *reaction.message_id.as_u64() as i64, *reaction.guild_id.unwrap().as_u64() as i64);
+        for m in messages {
+            println!("{} {}", m.id, reaction.emoji.to_string());
+        }
+    }
+
+    async fn reaction_remove(&self, ctx: Context, reaction: Reaction) {
+        let data = ctx.data.read().await;
+        let pool = data.get::<DBConnection>().unwrap();
+        let conn = pool.get().unwrap();
+
+        let messages = find_message(&conn, *reaction.message_id.as_u64() as i64, *reaction.guild_id.unwrap().as_u64() as i64);
         for m in messages {
             println!("{}", m.id);
         }
@@ -59,8 +71,6 @@ impl EventHandler for Handler {
         let guild_data = get_guild(&conn, guild_id);
         let channel_id = *msg.channel_id.as_u64() as i64;
 
-        let guild = msg.guild(&ctx.cache).await.unwrap();
-        let guild_icon = guild.icon_url().unwrap();
         let banned = is_banned(&conn, *msg.author.id.as_u64() as i64);
 
         if !msg.author.bot && guild_data.channel_id == channel_id {
@@ -72,17 +82,19 @@ impl EventHandler for Handler {
                 return;
             }
 
+            let guild = msg.guild(&ctx.cache).await.unwrap();
+            let guild_icon = guild.icon_url().unwrap();
             let guilds = get_guilds(&conn);
-            let mut embed_ids = Vec::new();
-            let mut msg_ids = Vec::new();
+            let mut embed_ids = HashMap::new();
+            let mut msg_ids = HashMap::new();
 
             for g in guilds {
-                let image_regex =
-                    Regex::new(r"(http(s?)://)([/|.|\w|\s|-])*\.(?:jpg|gif|png)").unwrap();
+                let image_regex = Regex::new(r"((http(s?)://)([/|.|\w|\s|-])*\.(?:jpg|gif|png))").unwrap();
+                let tenor_regex = Regex::new(r"(http(s?)://)((tenor\.com.*)|(media\.giphy\.com.*)|(gph\.is.*))").unwrap();
 
                 let channel = ChannelId(g.channel_id as u64);
                 match channel
-                    .send_message(&ctx.http, |m| {
+                    .send_message(&ctx.http, |m| {    
                         m.embed(|e| {
                             if image_regex.is_match(&msg.content) {
                                 e.image(&msg.content);
@@ -113,16 +125,25 @@ impl EventHandler for Handler {
                 {
                     Err(_) => println!("wtf are u doing"),
                     Ok(message) => {
-                        embed_ids.push(*message.id.as_u64() as i64);
+                        embed_ids.insert(g.id, *message.id.as_u64() as i64);
                     },
                 };
+
+                if tenor_regex.is_match(&msg.content) {
+                    match channel.say(&ctx.http, &msg.content).await {
+                        Err(_) => println!("brah learn to write Rust"),
+                        Ok(message) => {
+                            msg_ids.insert(g.id, *message.id.as_u64() as i64);
+                        },
+                    };
+                }
 
                 for attachment in msg.attachments.clone() {
                     if channel_id != *channel.as_u64() as i64 {
                         match channel.say(&ctx.http, attachment.url).await {
                             Err(_) => println!("brah learn to write Rust"),
                             Ok(message) => {
-                                msg_ids.push(*message.id.as_u64() as i64);
+                                msg_ids.insert(g.id, *message.id.as_u64() as i64);
                             },
                         };
                     }
@@ -137,7 +158,7 @@ impl EventHandler for Handler {
                     _ => (),
                 };
             } else {
-                msg_ids.push(*msg.id.as_u64() as i64);
+                msg_ids.insert(guild_id, *msg.id.as_u64() as i64);
             }
 
             create_message(&conn, embed_ids, msg_ids);
