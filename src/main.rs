@@ -51,7 +51,15 @@ impl EventHandler for Handler {
         let guild_icon = guild.icon_url().unwrap();
         let banned = is_banned(&conn, *msg.author.id.as_u64() as i64);
 
-        if !banned && !msg.author.bot && guild_data.channel_id == channel_id {
+        if !msg.author.bot && guild_data.channel_id == channel_id {
+            if banned {
+                match msg.delete(&ctx.http).await {
+                    Err(_) => println!("wtf bro"),
+                    _ => (),
+                };
+                return;
+            }
+
             let guilds = get_guilds(&conn);
 
             for g in guilds {
