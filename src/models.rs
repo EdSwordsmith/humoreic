@@ -49,6 +49,8 @@ pub struct SavedReaction {
     #[sql_type = "BigInt"]
     pub message_id: i64,
     #[sql_type = "BigInt"]
+    pub channel_id: i64,
+    #[sql_type = "BigInt"]
     pub user_id: i64
 }
 
@@ -57,5 +59,6 @@ pub struct SavedReaction {
 pub struct NewReaction {
     pub reaction: String,
     pub message_id: i64,
+    pub channel_id: i64,
     pub user_id: i64
 }

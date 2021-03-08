@@ -125,13 +125,14 @@ pub fn find_message(conn: &PgConnection, id: i64, guild_id: i64) -> SavedMessage
 }
 
 pub fn create_reaction(conn: &PgConnection, message_id: i64, reaction: &String, 
-    user_id: i64) -> SavedReaction {
+    user_id: i64, channel_id: i64) -> SavedReaction {
     use schema::reactions;
 
     let new_reaction = NewReaction {
         message_id,
         reaction: (*reaction).clone(),
-        user_id
+        user_id,
+        channel_id
     };
 
     diesel::insert_into(reactions::table)
@@ -156,7 +157,7 @@ pub fn get_reactions(conn: &PgConnection, message_id: i64) -> HashMap::<String, 
         .on(reactions::message_id.eq(messages::id)
         .and(reactions::message_id.eq(message_id))))
         .select((reactions::id, reactions::reaction, 
-            reactions::message_id, reactions::user_id))
+            reactions::message_id, reactions::channel_id, reactions::user_id))
         .load(conn)
         .expect("lul");
 
@@ -179,6 +180,19 @@ pub fn has_reaction(reactions: &HashMap::<String, Vec<SavedReaction>>, reaction:
     if let Some(rs) = reactions {
         for r in rs.iter(){
             if r.user_id == user_id {
+                return true;
+            }
+        }
+    }
+
+    false
+}
+
+pub fn reaction_actually_exists(reactions: &HashMap::<String, Vec<SavedReaction>>, reaction: &String, user_id: i64, channel_id: i64) -> bool {
+    let reactions: Option<&Vec<SavedReaction>> = reactions.get(reaction);
+    if let Some(rs) = reactions {
+        for r in rs.iter(){
+            if r.user_id == user_id && r.channel_id == channel_id {
                 return true;
             }
         }

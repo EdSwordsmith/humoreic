@@ -1,3 +1,4 @@
+use humoreic::reaction_actually_exists;
 use humoreic::delete_reaction;
 use humoreic::models::SavedReaction;
 use humoreic::create_reaction;
@@ -65,8 +66,8 @@ impl EventHandler for Handler {
             return;
         }
 
-        create_reaction(&conn, message.id, &r, user_id);
-        let dummy_reaction = SavedReaction{id: 0, reaction: String::new(), message_id: 0, user_id: 0};
+        create_reaction(&conn, message.id, &r, user_id, *reaction.channel_id.as_u64() as i64);
+        let dummy_reaction = SavedReaction{id: 0, reaction: String::new(), message_id: 0, user_id: 0, channel_id: 0};
         if let Some(react) = reactions.get_mut(&r) {
             react.push(dummy_reaction);
         } else {
@@ -81,8 +82,14 @@ impl EventHandler for Handler {
             fake_embed.fields = vec![];
 
             let mut embed = CreateEmbed::from(fake_embed);
+            let mut text = String::new();
+
             for (re, v) in reactions.iter() {
-                embed.field(re, v.len(), true);
+                text += &format!(" {} {} ", v.len(), re);
+            }
+
+            if reactions.len() > 0 {
+                embed.field("Reactions", text, true);
             }
 
             channel.edit_message(&ctx.http, message_id, |edit| edit.embed(|e| {
@@ -105,7 +112,7 @@ impl EventHandler for Handler {
         let embeds = message.embed_ids.as_object().unwrap();
         let reactions = get_reactions(&conn, message.id);
 
-        if !has_reaction(&reactions, &r, user_id) {
+        if !reaction_actually_exists(&reactions, &r, user_id, *reaction.channel_id.as_u64() as i64) {
             return;
         }
 
@@ -120,8 +127,14 @@ impl EventHandler for Handler {
             fake_embed.fields = vec![];
 
             let mut embed = CreateEmbed::from(fake_embed);
+            let mut text = String::new();
+
             for (re, v) in reactions.iter() {
-                embed.field(re, v.len(), true);
+                text += &format!(" {} {} ", v.len(), re);
+            }
+
+            if reactions.len() > 0 {
+                embed.field("Reactions", text, true);
             }
 
             channel.edit_message(&ctx.http, message_id, |edit| edit.embed(|e| {

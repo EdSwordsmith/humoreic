@@ -30,6 +30,7 @@ table! {
         id -> Int8,
         reaction -> Varchar,
         message_id -> Int8,
+        channel_id -> Int8,
         user_id -> Int8,
     }
 }
