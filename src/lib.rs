@@ -140,10 +140,11 @@ pub fn create_reaction(conn: &PgConnection, message_id: i64, reaction: &String,
         .expect("pls dont kill me")
 }
 
-pub fn delete_reaction(conn: &PgConnection, reaction_id: i64) {
+pub fn delete_reaction(conn: &PgConnection, message: i64, r: &String, user: i64) {
     use schema::reactions::dsl::*;
 
-    diesel::delete(reactions.filter(id.eq(reaction_id))).execute(conn);
+    diesel::delete(reactions.filter(reaction.eq(r))
+        .filter(user_id.eq(user)).filter(message_id.eq(message))).execute(conn).expect("BOIII");
 }
 
 pub fn get_reactions(conn: &PgConnection, message_id: i64) -> HashMap::<String, Vec<SavedReaction>> {
@@ -173,11 +174,13 @@ pub fn get_reactions(conn: &PgConnection, message_id: i64) -> HashMap::<String, 
     return reactions_group;
 }
 
-pub fn has_reaction(reactions: HashMap::<String, Vec<SavedReaction>>, reaction: &String, user_id: i64) -> bool {
-    let reactions: &Vec<SavedReaction> = reactions.get(reaction).expect("aiaiai");
-    for r in reactions.iter(){
-        if r.user_id == user_id {
-            return true;
+pub fn has_reaction(reactions: &HashMap::<String, Vec<SavedReaction>>, reaction: &String, user_id: i64) -> bool {
+    let reactions: Option<&Vec<SavedReaction>> = reactions.get(reaction);
+    if let Some(rs) = reactions {
+        for r in rs.iter(){
+            if r.user_id == user_id {
+                return true;
+            }
         }
     }
 

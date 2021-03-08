@@ -1,4 +1,8 @@
-use serde_json::Map;
+use humoreic::delete_reaction;
+use humoreic::models::SavedReaction;
+use humoreic::create_reaction;
+use humoreic::has_reaction;
+use humoreic::get_reactions;
 use humoreic::create_message;
 use dotenv::dotenv;
 use humoreic::create_admin;
@@ -13,7 +17,6 @@ use regex::Regex;
 use std::env;
 use std::collections::HashMap;
 use serenity::builder::CreateEmbed;
-use serde_json::json;
 
 use serenity::{
     async_trait,
@@ -51,33 +54,24 @@ impl EventHandler for Handler {
         let message = find_message(&conn, *reaction.message_id.as_u64() as i64, *reaction.guild_id.unwrap().as_u64() as i64);
         let guilds = get_guilds(&conn);
         let r = reaction.emoji.to_string();
+        let user_id = *reaction.user_id.unwrap().as_u64() as i64;
 
         let embeds = message.embed_ids.as_object().unwrap();
 
         /* Edu fix pls LUL */
-        /*let reactions = message.reactions.as_object().unwrap();
-        let mut new_reactions = Map::new();
-        
-        if let Some(reaction_data) = reactions.get(&r) {
-            let reaction_list = reaction_data.as_array().unwrap();
-            if reaction_list.contains(&json!(*reaction.user_id.unwrap().as_u64() as i64)) {
-                reaction.delete(&ctx.http).await.expect("Delete it boi");
-                return;
-            }
-
-            let mut new_list = reaction_list.clone();
-            new_list.push(json!(*reaction.user_id.unwrap().as_u64() as i64));
-            new_reactions.insert(r.clone(), json!(new_list));
+        let mut reactions = get_reactions(&conn, message.id);
+        if has_reaction(&reactions, &r, user_id) {
+            reaction.delete(&ctx.http).await.expect("Delete it boi");
+            return;
         }
 
-        for (reac, list) in reactions {
-            if *reac != r {
-                new_reactions.insert(reac.clone(), list.clone());
-            }
+        create_reaction(&conn, message.id, &r, user_id);
+        let dummy_reaction = SavedReaction{id: 0, reaction: String::new(), message_id: 0, user_id: 0};
+        if let Some(react) = reactions.get_mut(&r) {
+            react.push(dummy_reaction);
+        } else {
+            reactions.insert(r.clone(), vec![dummy_reaction]);
         }
-
-        update_message(&conn, message.id, new_reactions);
-        */
 
         for g in &guilds {
             let message_id = embeds.get(&g.id.to_string()).unwrap().as_u64().unwrap();
@@ -87,7 +81,9 @@ impl EventHandler for Handler {
             fake_embed.fields = vec![];
 
             let mut embed = CreateEmbed::from(fake_embed);
-            embed.field(&r, "1", true);
+            for (re, v) in reactions.iter() {
+                embed.field(re, v.len(), true);
+            }
 
             channel.edit_message(&ctx.http, message_id, |edit| edit.embed(|e| {
                 *e = embed;
@@ -102,7 +98,37 @@ impl EventHandler for Handler {
         let conn = pool.get().unwrap();
 
         let message = find_message(&conn, *reaction.message_id.as_u64() as i64, *reaction.guild_id.unwrap().as_u64() as i64);
-        println!("{}", message.id);
+        let guilds = get_guilds(&conn);
+        let r = reaction.emoji.to_string();
+        let user_id = *reaction.user_id.unwrap().as_u64() as i64;
+
+        let embeds = message.embed_ids.as_object().unwrap();
+        let reactions = get_reactions(&conn, message.id);
+
+        if !has_reaction(&reactions, &r, user_id) {
+            return;
+        }
+
+        delete_reaction(&conn, message.id, &r, user_id);
+        let reactions = get_reactions(&conn, message.id);
+
+        for g in &guilds {
+            let message_id = embeds.get(&g.id.to_string()).unwrap().as_u64().unwrap();
+            let channel = ChannelId(g.channel_id as u64);
+            let mut msg = channel.message(&ctx.http, message_id).await.expect("Work bitch!");
+            let mut fake_embed = msg.embeds.remove(0);
+            fake_embed.fields = vec![];
+
+            let mut embed = CreateEmbed::from(fake_embed);
+            for (re, v) in reactions.iter() {
+                embed.field(re, v.len(), true);
+            }
+
+            channel.edit_message(&ctx.http, message_id, |edit| edit.embed(|e| {
+                *e = embed;
+                e
+            })).await.expect("You better edit the message, you little shit!");
+        }
     }
 
     async fn message(&self, ctx: Context, msg: Message) {
