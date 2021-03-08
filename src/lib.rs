@@ -1,9 +1,10 @@
 #[macro_use]
 extern crate diesel;
 
+use serde_json::Map;
 use crate::diesel::*;
 use crate::models::*;
-use diesel::{pg::PgConnection, sql_types::{BigInt, Text}, types::VarChar};
+use diesel::pg::PgConnection;
 use diesel::r2d2::{ConnectionManager, Pool, PoolError, PooledConnection};
 use dotenv::dotenv;
 use std::env;
@@ -117,9 +118,19 @@ pub fn create_message(conn: &PgConnection, embed_ids: HashMap<i64, i64>, msg_ids
         .expect("This is fine")
 }
 
-pub fn find_message(conn: &PgConnection, id: i64, guild_id: i64) -> Vec<SavedMessage> {
+pub fn find_message(conn: &PgConnection, id: i64, guild_id: i64) -> SavedMessage {
     diesel::sql_query(
         format!("SELECT * FROM messages WHERE messages.embed_ids->'{}' @> '{}' OR messages.msg_ids->'{}' @> '{}'", guild_id, id, guild_id, id))
         .get_results::<SavedMessage>(conn)
+        .expect("...")
+        .remove(0)
+}
+
+pub fn update_message(conn: &PgConnection, message_id: i64, reactions_map: Map<String, serde_json::Value>) -> SavedMessage {
+    use schema::messages::dsl::*;
+
+    diesel::update(messages.find(message_id))
+        .set(reactions.eq(json!(reactions_map)))
+        .get_result::<SavedMessage>(conn)
         .expect("...")
 }

@@ -1,4 +1,6 @@
-use humoreic::{create_message, schema::messages::reactions};
+use serde_json::Map;
+use humoreic::update_message;
+use humoreic::create_message;
 use dotenv::dotenv;
 use humoreic::create_admin;
 use humoreic::create_ban;
@@ -12,6 +14,7 @@ use regex::Regex;
 use std::env;
 use std::collections::HashMap;
 use serenity::builder::CreateEmbed;
+use serde_json::json;
 
 use serenity::{
     async_trait,
@@ -46,25 +49,48 @@ impl EventHandler for Handler {
         let pool = data.get::<DBConnection>().unwrap();
         let conn = pool.get().unwrap();
 
-        let messages = find_message(&conn, *reaction.message_id.as_u64() as i64, *reaction.guild_id.unwrap().as_u64() as i64);
+        let message = find_message(&conn, *reaction.message_id.as_u64() as i64, *reaction.guild_id.unwrap().as_u64() as i64);
         let guilds = get_guilds(&conn);
         let r = reaction.emoji.to_string();
 
-        for m in messages {
-            let embeds = m.embed_ids.as_object().unwrap();
-
-            for g in &guilds {
-                let message_id = embeds.get(&g.id.to_string()).unwrap().as_u64().unwrap();
-                let channel = ChannelId(g.channel_id as u64);
-                let mut msg = channel.message(&ctx.http, message_id).await.expect("Work bitch!");
-                let mut embed = CreateEmbed::from(msg.embeds.remove(0));
-                embed.title("AHAHHAHAHAHHAH get pranked!");
-
-                channel.edit_message(&ctx.http, message_id, |edit| edit.embed(|e| {
-                    *e = embed;
-                    e
-                })).await;
+        let embeds = message.embed_ids.as_object().unwrap();
+        let reactions = message.reactions.as_object().unwrap();
+        let mut new_reactions = Map::new();
+        
+        if let Some(reaction_data) = reactions.get(&r) {
+            let reaction_list = reaction_data.as_array().unwrap();
+            if reaction_list.contains(&json!(*reaction.user_id.unwrap().as_u64() as i64)) {
+                reaction.delete(&ctx.http).await.expect("Delete it boi");
+                return;
             }
+
+            let mut new_list = reaction_list.clone();
+            new_list.push(json!(*reaction.user_id.unwrap().as_u64() as i64));
+            new_reactions.insert(r.clone(), json!(new_list));
+        }
+
+        for (reac, list) in reactions {
+            if *reac != r {
+                new_reactions.insert(reac.clone(), list.clone());
+            }
+        }
+
+        update_message(&conn, message.id, new_reactions);
+
+        for g in &guilds {
+            let message_id = embeds.get(&g.id.to_string()).unwrap().as_u64().unwrap();
+            let channel = ChannelId(g.channel_id as u64);
+            let mut msg = channel.message(&ctx.http, message_id).await.expect("Work bitch!");
+            let mut fake_embed = msg.embeds.remove(0);
+            fake_embed.fields = vec![];
+
+            let mut embed = CreateEmbed::from(fake_embed);
+            embed.field(&r, "1", true);
+
+            channel.edit_message(&ctx.http, message_id, |edit| edit.embed(|e| {
+                *e = embed;
+                e
+            })).await.expect("You better edit the message, you little shit!");
         }
     }
 
@@ -73,11 +99,8 @@ impl EventHandler for Handler {
         let pool = data.get::<DBConnection>().unwrap();
         let conn = pool.get().unwrap();
 
-        let messages = find_message(&conn, *reaction.message_id.as_u64() as i64, *reaction.guild_id.unwrap().as_u64() as i64);
-
-        for m in messages {
-            println!("{}", m.id);
-        }
+        let message = find_message(&conn, *reaction.message_id.as_u64() as i64, *reaction.guild_id.unwrap().as_u64() as i64);
+        println!("{}", message.id);
     }
 
     async fn message(&self, ctx: Context, msg: Message) {
@@ -251,9 +274,9 @@ async fn admin(ctx: &Context, msg: &Message) -> CommandResult {
     let conn = pool.get().unwrap();
 
     if is_admin(&conn, *msg.author.id.as_u64() as i64) {
-        msg.reply(&ctx, "Ya bro, you an admin!").await;
+        msg.reply(&ctx, "Ya bro, you an admin!").await?;
     } else {
-        msg.reply(&ctx, "Fuck off, bro!").await;
+        msg.reply(&ctx, "Fuck off, bro!").await?;
     }
 
     Ok(())
