@@ -22,13 +22,24 @@ table! {
         id -> Int8,
         embed_ids -> Jsonb,
         msg_ids -> Jsonb,
-        reactions -> Jsonb,
     }
 }
+
+table! {
+    reactions (id) {
+        id -> Int8,
+        reaction -> Varchar,
+        message_id -> Int8,
+        user_id -> Int8,
+    }
+}
+
+joinable!(reactions -> messages (message_id));
 
 allow_tables_to_appear_in_same_query!(
     admins,
     bans,
     guilds,
     messages,
+    reactions,
 );

@@ -1,5 +1,4 @@
 use serde_json::Map;
-use humoreic::update_message;
 use humoreic::create_message;
 use dotenv::dotenv;
 use humoreic::create_admin;
@@ -54,7 +53,9 @@ impl EventHandler for Handler {
         let r = reaction.emoji.to_string();
 
         let embeds = message.embed_ids.as_object().unwrap();
-        let reactions = message.reactions.as_object().unwrap();
+
+        /* Edu fix pls LUL */
+        /*let reactions = message.reactions.as_object().unwrap();
         let mut new_reactions = Map::new();
         
         if let Some(reaction_data) = reactions.get(&r) {
@@ -76,6 +77,7 @@ impl EventHandler for Handler {
         }
 
         update_message(&conn, message.id, new_reactions);
+        */
 
         for g in &guilds {
             let message_id = embeds.get(&g.id.to_string()).unwrap().as_u64().unwrap();

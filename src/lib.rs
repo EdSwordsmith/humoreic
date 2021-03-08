@@ -1,7 +1,6 @@
 #[macro_use]
 extern crate diesel;
 
-use serde_json::Map;
 use crate::diesel::*;
 use crate::models::*;
 use diesel::pg::PgConnection;
@@ -109,7 +108,6 @@ pub fn create_message(conn: &PgConnection, embed_ids: HashMap<i64, i64>, msg_ids
     let new_message = NewMessage {
         embed_ids: json!(embed_ids),
         msg_ids: json!(msg_ids),
-        reactions: json!({}),
     };
 
     diesel::insert_into(messages::table)
@@ -126,11 +124,71 @@ pub fn find_message(conn: &PgConnection, id: i64, guild_id: i64) -> SavedMessage
         .remove(0)
 }
 
-pub fn update_message(conn: &PgConnection, message_id: i64, reactions_map: Map<String, serde_json::Value>) -> SavedMessage {
+pub fn create_reaction(conn: &PgConnection, message_id: i64, reaction: &String, 
+    user_id: i64) -> SavedReaction {
+    use schema::reactions;
+
+    let new_reaction = NewReaction {
+        message_id,
+        reaction: (*reaction).clone(),
+        user_id
+    };
+
+    diesel::insert_into(reactions::table)
+        .values(new_reaction)
+        .get_result(conn)
+        .expect("pls dont kill me")
+}
+
+pub fn delete_reaction(conn: &PgConnection, reaction_id: i64) {
+    use schema::reactions::dsl::*;
+
+    diesel::delete(reactions.filter(id.eq(reaction_id))).execute(conn);
+}
+
+pub fn get_reactions(conn: &PgConnection, message_id: i64) -> HashMap::<String, Vec<SavedReaction>> {
+    use schema::messages;
+    use schema::reactions;
+
+    let reactions: Vec<SavedReaction> = reactions::table
+        .inner_join(messages::table
+        .on(reactions::message_id.eq(messages::id)
+        .and(reactions::message_id.eq(message_id))))
+        .select((reactions::id, reactions::reaction, 
+            reactions::message_id, reactions::user_id))
+        .load(conn)
+        .expect("lul");
+
+    
+    let mut reactions_group = HashMap::<String, Vec<SavedReaction>>::new();
+    for r in reactions.iter() {
+        if !reactions_group.contains_key(&r.reaction) {
+            reactions_group.insert(r.reaction.clone(), Vec::new());
+        }
+
+        reactions_group.get_mut(&r.reaction).expect("get me out")
+            .push((*r).clone());
+    }
+
+    return reactions_group;
+}
+
+pub fn has_reaction(reactions: HashMap::<String, Vec<SavedReaction>>, reaction: &String, user_id: i64) -> bool {
+    let reactions: &Vec<SavedReaction> = reactions.get(reaction).expect("aiaiai");
+    for r in reactions.iter(){
+        if r.user_id == user_id {
+            return true;
+        }
+    }
+
+    false
+}
+
+/*pub fn update_message(conn: &PgConnection, message_id: i64, reactions_map: Map<String, serde_json::Value>) -> SavedMessage {
     use schema::messages::dsl::*;
 
     diesel::update(messages.find(message_id))
         .set(reactions.eq(json!(reactions_map)))
         .get_result::<SavedMessage>(conn)
         .expect("...")
-}
+}*/
