@@ -112,6 +112,7 @@ impl EventHandler for Handler {
                         .unwrap();
                 let video_regex =
                     Regex::new(r"((http(s?)://)([/|.|\w|\s|-])*\.(?:mp4|webm))").unwrap();
+                msg_ids.insert(g.id, vec![]);
 
                 let channel = ChannelId(g.channel_id as u64);
                 match channel
@@ -154,7 +155,7 @@ impl EventHandler for Handler {
                     match channel.say(&ctx.http, &msg.content).await {
                         Err(_) => println!("brah learn to write Rust"),
                         Ok(message) => {
-                            msg_ids.insert(g.id, message.id.0 as i64);
+                            msg_ids.get_mut(&g.id).unwrap().push(message.id.0 as i64);
                         }
                     };
                 }
@@ -164,7 +165,7 @@ impl EventHandler for Handler {
                         match channel.say(&ctx.http, attachment.url).await {
                             Err(_) => println!("brah learn to write Rust"),
                             Ok(message) => {
-                                msg_ids.insert(g.id, message.id.0 as i64);
+                                msg_ids.get_mut(&g.id).unwrap().push(message.id.0 as i64);
                             }
                         };
                     }
@@ -179,7 +180,7 @@ impl EventHandler for Handler {
                     _ => (),
                 };
             } else {
-                msg_ids.insert(guild_id, msg.id.0 as i64);
+                msg_ids.get_mut(&guild_id).unwrap().push(msg.id.0 as i64);
             }
 
             create_message(&conn, embed_ids, msg_ids);

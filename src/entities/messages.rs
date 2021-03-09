@@ -24,7 +24,7 @@ pub struct NewMessage {
 pub fn create_message(
     conn: &PgConnection,
     embed_ids: HashMap<i64, i64>,
-    msg_ids: HashMap<i64, i64>,
+    msg_ids: HashMap<i64, Vec<i64>>,
 ) -> SavedMessage {
     let new_message = NewMessage {
         embed_ids: json!(embed_ids),
@@ -43,4 +43,12 @@ pub fn find_message(conn: &PgConnection, id: i64, guild_id: i64) -> SavedMessage
         .get_results::<SavedMessage>(conn)
         .expect("...")
         .remove(0)
+}
+
+pub fn delete_message(conn: &PgConnection, msg_id: i64) {
+    use crate::schema::messages::dsl::*;
+
+    diesel::delete(messages.find(msg_id))
+        .execute(conn)
+        .expect("APAGA MALUCO");
 }
