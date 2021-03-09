@@ -1,8 +1,12 @@
 use regex::Regex;
 use serenity::{
-    builder::CreateEmbed,
     async_trait,
-    model::{channel::{Message, Reaction}, gateway::Ready, id::ChannelId},
+    builder::CreateEmbed,
+    model::{
+        channel::{Message, Reaction},
+        gateway::Ready,
+        id::ChannelId,
+    },
     prelude::*,
 };
 
@@ -11,6 +15,7 @@ use crate::entities::bans::*;
 use crate::entities::guilds::*;
 use crate::entities::messages::*;
 use crate::entities::reactions::*;
+use serenity::model::gateway::Activity;
 use std::collections::HashMap;
 
 pub struct DBConnection;
@@ -20,13 +25,21 @@ impl TypeMapKey for DBConnection {
 
 pub struct Handler;
 
-async fn update_embeds(ctx: &Context, message: &SavedMessage, guilds: &Vec<Guild>, reactions: &HashMap<String, Vec<SavedReaction>>) {
+async fn update_embeds(
+    ctx: &Context,
+    message: &SavedMessage,
+    guilds: &Vec<Guild>,
+    reactions: &HashMap<String, Vec<SavedReaction>>,
+) {
     let embeds = message.embed_ids.as_object().unwrap();
 
     for g in guilds.iter() {
         let message_id = embeds.get(&g.id.to_string()).unwrap().as_u64().unwrap();
         let channel = ChannelId(g.channel_id as u64);
-        let mut msg = channel.message(&ctx.http, message_id).await.expect("Work bitch!");
+        let mut msg = channel
+            .message(&ctx.http, message_id)
+            .await
+            .expect("Work bitch!");
         let mut fake_embed = msg.embeds.remove(0);
         fake_embed.fields = vec![];
 
@@ -51,10 +64,15 @@ async fn update_embeds(ctx: &Context, message: &SavedMessage, guilds: &Vec<Guild
             embed.field("Reactions", text, true);
         }
 
-        channel.edit_message(&ctx.http, message_id, |edit| edit.embed(|e| {
-            *e = embed;
-            e
-        })).await.expect("You better edit the message, you little shit!");
+        channel
+            .edit_message(&ctx.http, message_id, |edit| {
+                edit.embed(|e| {
+                    *e = embed;
+                    e
+                })
+            })
+            .await
+            .expect("You better edit the message, you little shit!");
     }
 }
 
@@ -87,9 +105,13 @@ impl EventHandler for Handler {
             let mut msg_ids = HashMap::new();
 
             for g in guilds {
-                let image_regex = Regex::new(r"((http(s?)://)([/|.|\w|\s|-])*\.(?:jpg|gif|png))").unwrap();
-                let tenor_regex = Regex::new(r"(http(s?)://)((tenor\.com.*)|(media\.giphy\.com.*)|(gph\.is.*))").unwrap();
-                let video_regex = Regex::new(r"((http(s?)://)([/|.|\w|\s|-])*\.(?:mp4|webm))").unwrap();
+                let image_regex =
+                    Regex::new(r"((http(s?)://)([/|.|\w|\s|-])*\.(?:jpg|gif|png))").unwrap();
+                let tenor_regex =
+                    Regex::new(r"(http(s?)://)((tenor\.com.*)|(media\.giphy\.com.*)|(gph\.is.*))")
+                        .unwrap();
+                let video_regex =
+                    Regex::new(r"((http(s?)://)([/|.|\w|\s|-])*\.(?:mp4|webm))").unwrap();
 
                 let channel = ChannelId(g.channel_id as u64);
                 match channel
@@ -125,7 +147,7 @@ impl EventHandler for Handler {
                     Err(_) => println!("wtf are u doing"),
                     Ok(message) => {
                         embed_ids.insert(g.id, message.id.0 as i64);
-                    },
+                    }
                 };
 
                 if tenor_regex.is_match(&msg.content) || video_regex.is_match(&msg.content) {
@@ -133,7 +155,7 @@ impl EventHandler for Handler {
                         Err(_) => println!("brah learn to write Rust"),
                         Ok(message) => {
                             msg_ids.insert(g.id, message.id.0 as i64);
-                        },
+                        }
                     };
                 }
 
@@ -143,7 +165,7 @@ impl EventHandler for Handler {
                             Err(_) => println!("brah learn to write Rust"),
                             Ok(message) => {
                                 msg_ids.insert(g.id, message.id.0 as i64);
-                            },
+                            }
                         };
                     }
                 }
@@ -169,7 +191,11 @@ impl EventHandler for Handler {
         let pool = data.get::<DBConnection>().unwrap();
         let conn = pool.get().unwrap();
 
-        let message = find_message(&conn, reaction.message_id.0 as i64, reaction.guild_id.unwrap().0 as i64);
+        let message = find_message(
+            &conn,
+            reaction.message_id.0 as i64,
+            reaction.guild_id.unwrap().0 as i64,
+        );
         let guilds = get_guilds(&conn);
         let r = reaction.emoji.to_string();
         let user_id = reaction.user_id.unwrap().0 as i64;
@@ -182,7 +208,13 @@ impl EventHandler for Handler {
         }
 
         create_reaction(&conn, message.id, &r, user_id, reaction.channel_id.0 as i64);
-        let dummy_reaction = SavedReaction{id: 0, reaction: String::new(), message_id: 0, user_id: 0, channel_id: 0};
+        let dummy_reaction = SavedReaction {
+            id: 0,
+            reaction: String::new(),
+            message_id: 0,
+            user_id: 0,
+            channel_id: 0,
+        };
         if let Some(react) = reactions.get_mut(&r) {
             react.push(dummy_reaction);
         } else {
@@ -197,7 +229,11 @@ impl EventHandler for Handler {
         let pool = data.get::<DBConnection>().unwrap();
         let conn = pool.get().unwrap();
 
-        let message = find_message(&conn, reaction.message_id.0 as i64, reaction.guild_id.unwrap().0 as i64);
+        let message = find_message(
+            &conn,
+            reaction.message_id.0 as i64,
+            reaction.guild_id.unwrap().0 as i64,
+        );
         let guilds = get_guilds(&conn);
         let r = reaction.emoji.to_string();
         let user_id = reaction.user_id.unwrap().0 as i64;
@@ -212,7 +248,9 @@ impl EventHandler for Handler {
         update_embeds(&ctx, &message, &guilds, &reactions).await;
     }
 
-    async fn ready(&self, _: Context, ready: Ready) {
+    async fn ready(&self, ctx: Context, ready: Ready) {
         println!("{} is connected!", ready.user.name);
+        ctx.set_activity(Activity::playing("memes for all EIC kind!"))
+            .await;
     }
 }

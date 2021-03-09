@@ -1,8 +1,8 @@
+use crate::schema::messages;
+use diesel::sql_types::{BigInt, Jsonb};
 use diesel::*;
 use serde_json::json;
 use std::collections::HashMap;
-use crate::schema::messages;
-use diesel::sql_types::{BigInt, Jsonb};
 
 #[derive(Queryable, QueryableByName)]
 pub struct SavedMessage {
@@ -21,7 +21,11 @@ pub struct NewMessage {
     pub msg_ids: serde_json::Value,
 }
 
-pub fn create_message(conn: &PgConnection, embed_ids: HashMap<i64, i64>, msg_ids: HashMap<i64,i64>) -> SavedMessage {
+pub fn create_message(
+    conn: &PgConnection,
+    embed_ids: HashMap<i64, i64>,
+    msg_ids: HashMap<i64, i64>,
+) -> SavedMessage {
     let new_message = NewMessage {
         embed_ids: json!(embed_ids),
         msg_ids: json!(msg_ids),

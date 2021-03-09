@@ -37,10 +37,4 @@ table! {
 
 joinable!(reactions -> messages (message_id));
 
-allow_tables_to_appear_in_same_query!(
-    admins,
-    bans,
-    guilds,
-    messages,
-    reactions,
-);
+allow_tables_to_appear_in_same_query!(admins, bans, guilds, messages, reactions,);

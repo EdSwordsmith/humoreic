@@ -1,6 +1,6 @@
-use diesel::*;
 use crate::schema::admins;
 use crate::schema::admins::dsl::*;
+use diesel::*;
 
 #[derive(Queryable, Insertable)]
 #[table_name = "admins"]

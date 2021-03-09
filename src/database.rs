@@ -1,4 +1,4 @@
-use diesel::r2d2::{Pool, ConnectionManager, PooledConnection, PoolError};
+use diesel::r2d2::{ConnectionManager, Pool, PoolError, PooledConnection};
 use diesel::PgConnection;
 use std::env;
 

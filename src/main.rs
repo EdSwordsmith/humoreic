@@ -2,11 +2,8 @@
 extern crate diesel;
 
 use dotenv::dotenv;
+use serenity::{framework::standard::StandardFramework, prelude::*};
 use std::env;
-use serenity::{
-    framework::standard::StandardFramework,
-    prelude::*,
-};
 
 pub mod commands;
 pub mod database;

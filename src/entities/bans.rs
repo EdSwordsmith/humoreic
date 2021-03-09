@@ -1,6 +1,6 @@
-use diesel::*;
 use crate::schema::bans;
 use crate::schema::bans::dsl::*;
+use diesel::*;
 
 #[derive(Queryable, Insertable)]
 #[table_name = "bans"]

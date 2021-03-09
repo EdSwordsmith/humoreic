@@ -1,16 +1,16 @@
 use serenity::{
-    model::channel::Message,
     framework::standard::{
         macros::{command, group},
         CommandResult,
     },
+    model::channel::Message,
     prelude::*,
 };
 
-use crate::handler::DBConnection;
 use crate::entities::admins::*;
 use crate::entities::bans::*;
 use crate::entities::guilds::*;
+use crate::handler::DBConnection;
 
 #[group]
 #[commands(ping, setup, admin, addadmin, ban, unban)]
@@ -26,7 +26,7 @@ async fn ping(ctx: &Context, msg: &Message) -> CommandResult {
             + "=825194&_nc_ohc=D4Gg4D4CrvcAX-9A812&_nc_ht=scontent.flis6-1.fna&oh="
             + "af2a5651c2bc4c2e55affee070113262&oe=6068A3E0",
     )
-        .await?;
+    .await?;
     Ok(())
 }
 
@@ -38,11 +38,7 @@ async fn setup(ctx: &Context, msg: &Message) -> CommandResult {
 
     if is_admin(&conn, *msg.author.id.as_u64() as i64) {
         if let Some(guild_id) = msg.guild_id {
-            create_guild(
-                &conn,
-                guild_id.0 as i64,
-                msg.channel_id.0 as i64,
-            );
+            create_guild(&conn, guild_id.0 as i64, msg.channel_id.0 as i64);
         }
     }
 

@@ -1,5 +1,5 @@
-use diesel::*;
 use crate::schema::guilds;
+use diesel::*;
 
 #[derive(Queryable, Insertable)]
 #[table_name = "guilds"]
