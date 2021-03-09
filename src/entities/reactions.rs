@@ -43,7 +43,7 @@ pub fn create_reaction(
     diesel::insert_into(reactions::table)
         .values(new_reaction)
         .get_result(conn)
-        .expect("pls dont kill me")
+        .expect(&format!("Couldn't insert reaction in message {} in table", message_id))
 }
 
 pub fn delete_reaction(conn: &PgConnection, message: i64, r: &String, user: i64) {
@@ -56,7 +56,7 @@ pub fn delete_reaction(conn: &PgConnection, message: i64, r: &String, user: i64)
             .filter(message_id.eq(message)),
     )
     .execute(conn)
-    .expect("BOIII");
+    .expect(&format!("Couldn't delete reaction in message {} in table", message));
 }
 
 pub fn get_reactions(conn: &PgConnection, message_id: i64) -> HashMap<String, Vec<SavedReaction>> {
@@ -74,7 +74,7 @@ pub fn get_reactions(conn: &PgConnection, message_id: i64) -> HashMap<String, Ve
             reactions::user_id,
         ))
         .load(conn)
-        .expect("lul");
+        .expect("Couldn't get reactions");
 
     let mut reactions_group = HashMap::<String, Vec<SavedReaction>>::new();
     for r in reactions.iter() {
@@ -84,7 +84,7 @@ pub fn get_reactions(conn: &PgConnection, message_id: i64) -> HashMap<String, Ve
 
         reactions_group
             .get_mut(&r.reaction)
-            .expect("get me out")
+            .expect("Couldn't get mutex")
             .push((*r).clone());
     }
 

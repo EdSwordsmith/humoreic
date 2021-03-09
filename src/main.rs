@@ -5,11 +5,11 @@ use dotenv::dotenv;
 use serenity::{framework::standard::StandardFramework, prelude::*};
 use std::env;
 
-pub mod commands;
-pub mod database;
-pub mod entities;
-pub mod handler;
-pub mod schema;
+mod commands;
+mod database;
+mod entities;
+mod handler;
+mod schema;
 
 use commands::*;
 use database::*;

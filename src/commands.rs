@@ -7,12 +7,9 @@ use serenity::{
     prelude::*,
 };
 
-use crate::entities::admins::*;
-use crate::entities::bans::*;
-use crate::entities::guilds::*;
-use crate::entities::messages::*;
-use crate::handler::DBConnection;
+use crate::entities::{ admins::*, bans::*, guilds::*, messages::* };
 use serenity::model::id::ChannelId;
+use crate::database::get_db_connection;
 
 #[group]
 #[commands(ping, setup, admin, addadmin, ban, unban, del)]
@@ -34,9 +31,7 @@ async fn ping(ctx: &Context, msg: &Message) -> CommandResult {
 
 #[command]
 async fn setup(ctx: &Context, msg: &Message) -> CommandResult {
-    let data = ctx.data.read().await;
-    let pool = data.get::<DBConnection>().unwrap();
-    let conn = pool.get().unwrap();
+    let conn = get_db_connection(ctx).await;
 
     if is_admin(&conn, *msg.author.id.as_u64() as i64) {
         if let Some(guild_id) = msg.guild_id {
@@ -49,9 +44,7 @@ async fn setup(ctx: &Context, msg: &Message) -> CommandResult {
 
 #[command]
 async fn admin(ctx: &Context, msg: &Message) -> CommandResult {
-    let data = ctx.data.read().await;
-    let pool = data.get::<DBConnection>().unwrap();
-    let conn = pool.get().unwrap();
+    let conn = get_db_connection(ctx).await;
 
     if is_admin(&conn, msg.author.id.0 as i64) {
         msg.reply(&ctx, "Ya bro, you an admin!").await?;
@@ -64,9 +57,7 @@ async fn admin(ctx: &Context, msg: &Message) -> CommandResult {
 
 #[command]
 async fn addadmin(ctx: &Context, msg: &Message) -> CommandResult {
-    let data = ctx.data.read().await;
-    let pool = data.get::<DBConnection>().unwrap();
-    let conn = pool.get().unwrap();
+    let conn = get_db_connection(ctx).await;
 
     if is_admin(&conn, msg.author.id.0 as i64) {
         for mention in msg.mentions.iter() {
@@ -79,9 +70,7 @@ async fn addadmin(ctx: &Context, msg: &Message) -> CommandResult {
 
 #[command]
 async fn ban(ctx: &Context, msg: &Message) -> CommandResult {
-    let data = ctx.data.read().await;
-    let pool = data.get::<DBConnection>().unwrap();
-    let conn = pool.get().unwrap();
+    let conn = get_db_connection(ctx).await;
 
     if is_admin(&conn, msg.author.id.0 as i64) {
         for mention in msg.mentions.iter() {
@@ -94,9 +83,7 @@ async fn ban(ctx: &Context, msg: &Message) -> CommandResult {
 
 #[command]
 async fn unban(ctx: &Context, msg: &Message) -> CommandResult {
-    let data = ctx.data.read().await;
-    let pool = data.get::<DBConnection>().unwrap();
-    let conn = pool.get().unwrap();
+    let conn = get_db_connection(ctx).await;
 
     if is_admin(&conn, msg.author.id.0 as i64) {
         for mention in msg.mentions.iter() {
@@ -109,9 +96,7 @@ async fn unban(ctx: &Context, msg: &Message) -> CommandResult {
 
 #[command]
 async fn del(ctx: &Context, msg: &Message) -> CommandResult {
-    let data = ctx.data.read().await;
-    let pool = data.get::<DBConnection>().unwrap();
-    let conn = pool.get().unwrap();
+    let conn = get_db_connection(ctx).await;
     let args: Vec<&str> = msg.content.split(" ").collect();
 
     if is_admin(&conn, msg.author.id.0 as i64) {
@@ -130,12 +115,12 @@ async fn del(ctx: &Context, msg: &Message) -> CommandResult {
                         embed_ids.get(&g.id.to_string()).unwrap().as_u64().unwrap(),
                     )
                     .await
-                    .expect("APAGA MALUCO!");
+                    .expect(&format!("Couldn't delete message {}", msg.id.0));
                 for v in msg_ids.get(&g.id.to_string()).unwrap().as_array().unwrap() {
                     channel
                         .delete_message(&ctx.http, v.as_u64().unwrap())
                         .await
-                        .expect("APAGA MALUCO!");
+                        .expect(&format!("Couldn't delete message {}", msg.id.0));
                 }
             }
             delete_message(&conn, message.id);

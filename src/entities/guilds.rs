@@ -17,17 +17,18 @@ pub fn create_guild(conn: &PgConnection, guild_id: i64, channel_id: i64) -> Guil
     diesel::insert_into(guilds::table)
         .values(&new_guild)
         .get_result(conn)
-        .expect("This is fine")
+        .expect(&format!("Couldn't insert guild {} in table", guild_id))
 }
 
 pub fn get_guild(conn: &PgConnection, guild_id: i64) -> Guild {
     use crate::schema::guilds::dsl::*;
 
-    guilds.find(guild_id).first(conn).expect("Bruh 2.0")
+    guilds.find(guild_id).first(conn)
+        .expect(&format!("Couldn't get guild {}", guild_id))
 }
 
 pub fn get_guilds(conn: &PgConnection) -> Vec<Guild> {
     use crate::schema::guilds::dsl::*;
 
-    guilds.load::<Guild>(conn).expect("Error loading guilds")
+    guilds.load::<Guild>(conn).expect("Couldn't get guilds")
 }

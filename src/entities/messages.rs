@@ -34,14 +34,14 @@ pub fn create_message(
     diesel::insert_into(messages::table)
         .values(&new_message)
         .get_result(conn)
-        .expect("This is fine")
+        .expect("Couldn't insert message in table")
 }
 
 pub fn find_message(conn: &PgConnection, id: i64, guild_id: i64) -> SavedMessage {
     diesel::sql_query(
         format!("SELECT * FROM messages WHERE messages.embed_ids->'{}' @> '{}' OR messages.msg_ids->'{}' @> '{}'", guild_id, id, guild_id, id))
         .get_results::<SavedMessage>(conn)
-        .expect("...")
+        .expect(&format!("Couldn't find message {}", id))
         .remove(0)
 }
 
@@ -50,5 +50,5 @@ pub fn delete_message(conn: &PgConnection, msg_id: i64) {
 
     diesel::delete(messages.find(msg_id))
         .execute(conn)
-        .expect("APAGA MALUCO");
+        .expect(&format!("Couldn't delete message {}", msg_id));
 }

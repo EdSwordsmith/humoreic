@@ -1,14 +1,9 @@
 use regex::Regex;
-use serenity::{
-    async_trait,
-    builder::CreateEmbed,
-    model::{
+use serenity::{async_trait, builder::{CreateEmbed, CreateMessage}, model::{
         channel::{Message, Reaction},
         gateway::Ready,
         id::ChannelId,
-    },
-    prelude::*,
-};
+    }, prelude::*};
 
 use crate::database::PgPool;
 use crate::entities::bans::*;
@@ -17,6 +12,7 @@ use crate::entities::messages::*;
 use crate::entities::reactions::*;
 use serenity::model::gateway::Activity;
 use std::collections::HashMap;
+use crate::database::get_db_connection;
 
 pub struct DBConnection;
 impl TypeMapKey for DBConnection {
@@ -24,6 +20,36 @@ impl TypeMapKey for DBConnection {
 }
 
 pub struct Handler;
+
+fn create_embed(m: &mut CreateMessage, msg: &Message, 
+    guild: &serenity::model::guild::Guild, guild_icon: &String) {
+    let image_regex =
+    Regex::new(r"((http(s?)://)([/|.|\w|\s|-])*\.(?:jpg|gif|png))").unwrap();
+
+    m.embed(|e| {
+        if image_regex.is_match(&msg.content) {
+            e.image(&msg.content);
+        } else {
+            e.description(&msg.content);
+        }
+
+        e.author(|a| {
+            a.name(&msg.author.name);
+            a.icon_url(&msg.author.face());
+
+            a
+        });
+
+        e.footer(|f| {
+            f.text(&guild.name);
+            f.icon_url(&guild_icon);
+
+            f
+        });
+
+        e
+    });
+}
 
 async fn update_embeds(
     ctx: &Context,
@@ -39,7 +65,7 @@ async fn update_embeds(
         let mut msg = channel
             .message(&ctx.http, message_id)
             .await
-            .expect("Work bitch!");
+            .expect(&format!("Couldn't send message to channel {} with guild {}", channel.0, g.id));
         let mut fake_embed = msg.embeds.remove(0);
         fake_embed.fields = vec![];
 
@@ -72,16 +98,14 @@ async fn update_embeds(
                 })
             })
             .await
-            .expect("You better edit the message, you little shit!");
+            .expect(&format!("Couldn't edit message to channel {} with guild {}", channel.0, g.id));
     }
 }
 
 #[async_trait]
 impl EventHandler for Handler {
     async fn message(&self, ctx: Context, msg: Message) {
-        let data = ctx.data.read().await;
-        let pool = data.get::<DBConnection>().unwrap();
-        let conn = pool.get().unwrap();
+        let conn = get_db_connection(&ctx).await;
 
         let guild_id = msg.guild_id.unwrap().0 as i64;
         let guild_data = get_guild(&conn, guild_id);
@@ -91,22 +115,16 @@ impl EventHandler for Handler {
 
         if !msg.author.bot && guild_data.channel_id == channel_id {
             if banned {
-                match msg.delete(&ctx.http).await {
-                    Err(_) => println!("wtf bro"),
-                    _ => (),
-                };
+                msg.delete(&ctx.http).await
+                    .expect(&format!("Couldn't delete message {}", msg.id.0));
                 return;
             }
 
-            let guild = msg.guild(&ctx.cache).await.unwrap();
-            let guild_icon = guild.icon_url().unwrap();
             let guilds = get_guilds(&conn);
             let mut embed_ids = HashMap::new();
             let mut msg_ids = HashMap::new();
 
             for g in guilds {
-                let image_regex =
-                    Regex::new(r"((http(s?)://)([/|.|\w|\s|-])*\.(?:jpg|gif|png))").unwrap();
                 let tenor_regex =
                     Regex::new(r"(http(s?)://)((tenor\.com.*)|(media\.giphy\.com.*)|(gph\.is.*))")
                         .unwrap();
@@ -115,37 +133,15 @@ impl EventHandler for Handler {
                 msg_ids.insert(g.id, vec![]);
 
                 let channel = ChannelId(g.channel_id as u64);
+                let guild = msg.guild(&ctx.cache).await.unwrap();
+                let guild_icon = guild.icon_url().unwrap();
                 match channel
                     .send_message(&ctx.http, |m| {
-                        m.embed(|e| {
-                            if image_regex.is_match(&msg.content) {
-                                e.image(&msg.content);
-                            } else {
-                                e.description(&msg.content);
-                            }
-
-                            e.author(|a| {
-                                a.name(&msg.author.name);
-                                a.icon_url(&msg.author.face());
-
-                                a
-                            });
-
-                            e.footer(|f| {
-                                f.text(&guild.name);
-                                f.icon_url(&guild_icon);
-
-                                f
-                            });
-
-                            e
-                        });
-
+                        create_embed(m, &msg, &guild, &guild_icon);
                         m
-                    })
-                    .await
+                    }).await
                 {
-                    Err(_) => println!("wtf are u doing"),
+                    Err(_) => eprintln!("Couldn't send message to channel {} with guild {}", channel.0, guild.id.0),
                     Ok(message) => {
                         embed_ids.insert(g.id, message.id.0 as i64);
                     }
@@ -153,7 +149,7 @@ impl EventHandler for Handler {
 
                 if tenor_regex.is_match(&msg.content) || video_regex.is_match(&msg.content) {
                     match channel.say(&ctx.http, &msg.content).await {
-                        Err(_) => println!("brah learn to write Rust"),
+                        Err(_) => eprintln!("Couldn't send message to channel {} with guild {}", channel.0, guild.id.0),
                         Ok(message) => {
                             msg_ids.get_mut(&g.id).unwrap().push(message.id.0 as i64);
                         }
@@ -163,7 +159,7 @@ impl EventHandler for Handler {
                 for attachment in msg.attachments.clone() {
                     if channel_id != channel.0 as i64 {
                         match channel.say(&ctx.http, attachment.url).await {
-                            Err(_) => println!("brah learn to write Rust"),
+                            Err(_) => eprintln!("Couldn't send message to channel {} with guild {}", channel.0, guild.id.0),
                             Ok(message) => {
                                 msg_ids.get_mut(&g.id).unwrap().push(message.id.0 as i64);
                             }
@@ -175,10 +171,8 @@ impl EventHandler for Handler {
             // Apagar mensagem depois de enviar a todos os servers
             // Caso não tenha enviado imagens/videos
             if msg.attachments.len() == 0 {
-                match msg.delete(&ctx.http).await {
-                    Err(_) => println!("wtf bro"),
-                    _ => (),
-                };
+                msg.delete(&ctx.http).await
+                    .expect(&format!("Couldn't delete message {}", msg.id.0));
             } else {
                 msg_ids.get_mut(&guild_id).unwrap().push(msg.id.0 as i64);
             }
@@ -188,9 +182,7 @@ impl EventHandler for Handler {
     }
 
     async fn reaction_add(&self, ctx: Context, reaction: Reaction) {
-        let data = ctx.data.read().await;
-        let pool = data.get::<DBConnection>().unwrap();
-        let conn = pool.get().unwrap();
+        let conn = get_db_connection(&ctx).await;
 
         let message = find_message(
             &conn,
@@ -201,10 +193,10 @@ impl EventHandler for Handler {
         let r = reaction.emoji.to_string();
         let user_id = reaction.user_id.unwrap().0 as i64;
 
-        /* Edu fix pls LUL */
         let mut reactions = get_reactions(&conn, message.id);
         if has_reaction(&reactions, &r, user_id) {
-            reaction.delete(&ctx.http).await.expect("Delete it boi");
+            reaction.delete(&ctx.http).await
+                .expect(&format!("Couldn't delete reaction in message {}", reaction.message_id.0));
             return;
         }
 
@@ -226,9 +218,7 @@ impl EventHandler for Handler {
     }
 
     async fn reaction_remove(&self, ctx: Context, reaction: Reaction) {
-        let data = ctx.data.read().await;
-        let pool = data.get::<DBConnection>().unwrap();
-        let conn = pool.get().unwrap();
+        let conn = get_db_connection(&ctx).await;
 
         let message = find_message(
             &conn,

@@ -14,7 +14,7 @@ pub fn create_admin(conn: &PgConnection, user_id: i64) -> Admin {
     diesel::insert_into(admins::table)
         .values(&new_admin)
         .get_result(conn)
-        .expect("This is fine")
+        .expect(&format!("Couldn't insert admin {} in table", user_id))
 }
 
 pub fn is_admin(conn: &PgConnection, user_id: i64) -> bool {
