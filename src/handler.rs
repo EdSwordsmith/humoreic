@@ -13,7 +13,7 @@ use std::collections::HashMap;
 
 use crate::database::get_db_connection;
 use crate::database::PgPool;
-use crate::entities::admins;
+use crate::entities::admins::*;
 use crate::entities::bans::*;
 use crate::entities::guilds::*;
 use crate::entities::messages::*;
