@@ -40,8 +40,8 @@ async fn setup(ctx: &Context, msg: &Message) -> CommandResult {
         if let Some(guild_id) = msg.guild_id {
             create_guild(
                 &conn,
-                *guild_id.as_u64() as i64,
-                *msg.channel_id.as_u64() as i64,
+                guild_id.0 as i64,
+                msg.channel_id.0 as i64,
             );
         }
     }
@@ -55,7 +55,7 @@ async fn admin(ctx: &Context, msg: &Message) -> CommandResult {
     let pool = data.get::<DBConnection>().unwrap();
     let conn = pool.get().unwrap();
 
-    if is_admin(&conn, *msg.author.id.as_u64() as i64) {
+    if is_admin(&conn, msg.author.id.0 as i64) {
         msg.reply(&ctx, "Ya bro, you an admin!").await?;
     } else {
         msg.reply(&ctx, "Fuck off, bro!").await?;
@@ -70,9 +70,9 @@ async fn addadmin(ctx: &Context, msg: &Message) -> CommandResult {
     let pool = data.get::<DBConnection>().unwrap();
     let conn = pool.get().unwrap();
 
-    if is_admin(&conn, *msg.author.id.as_u64() as i64) {
+    if is_admin(&conn, msg.author.id.0 as i64) {
         for mention in msg.mentions.iter() {
-            create_admin(&conn, *mention.id.as_u64() as i64);
+            create_admin(&conn, mention.id.0 as i64);
         }
     }
 
@@ -85,9 +85,9 @@ async fn ban(ctx: &Context, msg: &Message) -> CommandResult {
     let pool = data.get::<DBConnection>().unwrap();
     let conn = pool.get().unwrap();
 
-    if is_admin(&conn, *msg.author.id.as_u64() as i64) {
+    if is_admin(&conn, msg.author.id.0 as i64) {
         for mention in msg.mentions.iter() {
-            create_ban(&conn, *mention.id.as_u64() as i64);
+            create_ban(&conn, mention.id.0 as i64);
         }
     }
 
@@ -100,9 +100,9 @@ async fn unban(ctx: &Context, msg: &Message) -> CommandResult {
     let pool = data.get::<DBConnection>().unwrap();
     let conn = pool.get().unwrap();
 
-    if is_admin(&conn, *msg.author.id.as_u64() as i64) {
+    if is_admin(&conn, msg.author.id.0 as i64) {
         for mention in msg.mentions.iter() {
-            rm_ban(&conn, *mention.id.as_u64() as i64);
+            rm_ban(&conn, mention.id.0 as i64);
         }
     }
 

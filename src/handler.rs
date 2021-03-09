@@ -65,11 +65,11 @@ impl EventHandler for Handler {
         let pool = data.get::<DBConnection>().unwrap();
         let conn = pool.get().unwrap();
 
-        let guild_id = *msg.guild_id.unwrap().as_u64() as i64;
+        let guild_id = msg.guild_id.unwrap().0 as i64;
         let guild_data = get_guild(&conn, guild_id);
-        let channel_id = *msg.channel_id.as_u64() as i64;
+        let channel_id = msg.channel_id.0 as i64;
 
-        let banned = is_banned(&conn, *msg.author.id.as_u64() as i64);
+        let banned = is_banned(&conn, msg.author.id.0 as i64);
 
         if !msg.author.bot && guild_data.channel_id == channel_id {
             if banned {
@@ -124,7 +124,7 @@ impl EventHandler for Handler {
                 {
                     Err(_) => println!("wtf are u doing"),
                     Ok(message) => {
-                        embed_ids.insert(g.id, *message.id.as_u64() as i64);
+                        embed_ids.insert(g.id, message.id.0 as i64);
                     },
                 };
 
@@ -132,17 +132,17 @@ impl EventHandler for Handler {
                     match channel.say(&ctx.http, &msg.content).await {
                         Err(_) => println!("brah learn to write Rust"),
                         Ok(message) => {
-                            msg_ids.insert(g.id, *message.id.as_u64() as i64);
+                            msg_ids.insert(g.id, message.id.0 as i64);
                         },
                     };
                 }
 
                 for attachment in msg.attachments.clone() {
-                    if channel_id != *channel.as_u64() as i64 {
+                    if channel_id != channel.0 as i64 {
                         match channel.say(&ctx.http, attachment.url).await {
                             Err(_) => println!("brah learn to write Rust"),
                             Ok(message) => {
-                                msg_ids.insert(g.id, *message.id.as_u64() as i64);
+                                msg_ids.insert(g.id, message.id.0 as i64);
                             },
                         };
                     }
@@ -157,7 +157,7 @@ impl EventHandler for Handler {
                     _ => (),
                 };
             } else {
-                msg_ids.insert(guild_id, *msg.id.as_u64() as i64);
+                msg_ids.insert(guild_id, msg.id.0 as i64);
             }
 
             create_message(&conn, embed_ids, msg_ids);
@@ -169,10 +169,10 @@ impl EventHandler for Handler {
         let pool = data.get::<DBConnection>().unwrap();
         let conn = pool.get().unwrap();
 
-        let message = find_message(&conn, *reaction.message_id.as_u64() as i64, *reaction.guild_id.unwrap().as_u64() as i64);
+        let message = find_message(&conn, reaction.message_id.0 as i64, reaction.guild_id.unwrap().0 as i64);
         let guilds = get_guilds(&conn);
         let r = reaction.emoji.to_string();
-        let user_id = *reaction.user_id.unwrap().as_u64() as i64;
+        let user_id = reaction.user_id.unwrap().0 as i64;
 
         /* Edu fix pls LUL */
         let mut reactions = get_reactions(&conn, message.id);
@@ -181,7 +181,7 @@ impl EventHandler for Handler {
             return;
         }
 
-        create_reaction(&conn, message.id, &r, user_id, *reaction.channel_id.as_u64() as i64);
+        create_reaction(&conn, message.id, &r, user_id, reaction.channel_id.0 as i64);
         let dummy_reaction = SavedReaction{id: 0, reaction: String::new(), message_id: 0, user_id: 0, channel_id: 0};
         if let Some(react) = reactions.get_mut(&r) {
             react.push(dummy_reaction);
@@ -197,13 +197,13 @@ impl EventHandler for Handler {
         let pool = data.get::<DBConnection>().unwrap();
         let conn = pool.get().unwrap();
 
-        let message = find_message(&conn, *reaction.message_id.as_u64() as i64, *reaction.guild_id.unwrap().as_u64() as i64);
+        let message = find_message(&conn, reaction.message_id.0 as i64, reaction.guild_id.unwrap().0 as i64);
         let guilds = get_guilds(&conn);
         let r = reaction.emoji.to_string();
-        let user_id = *reaction.user_id.unwrap().as_u64() as i64;
+        let user_id = reaction.user_id.unwrap().0 as i64;
         let reactions = get_reactions(&conn, message.id);
 
-        if !reaction_actually_exists(&reactions, &r, user_id, *reaction.channel_id.as_u64() as i64) {
+        if !reaction_actually_exists(&reactions, &r, user_id, reaction.channel_id.0 as i64) {
             return;
         }
 
