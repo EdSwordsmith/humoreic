@@ -23,7 +23,9 @@ pub fn create_guild(conn: &PgConnection, guild_id: i64, channel_id: i64) -> Guil
 pub fn get_guild(conn: &PgConnection, guild_id: i64) -> Guild {
     use crate::schema::guilds::dsl::*;
 
-    guilds.find(guild_id).first(conn)
+    guilds
+        .find(guild_id)
+        .first(conn)
         .expect(&format!("Couldn't get guild {}", guild_id))
 }
 

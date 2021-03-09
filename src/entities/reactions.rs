@@ -43,7 +43,10 @@ pub fn create_reaction(
     diesel::insert_into(reactions::table)
         .values(new_reaction)
         .get_result(conn)
-        .expect(&format!("Couldn't insert reaction in message {} in table", message_id))
+        .expect(&format!(
+            "Couldn't insert reaction in message {} in table",
+            message_id
+        ))
 }
 
 pub fn delete_reaction(conn: &PgConnection, message: i64, r: &String, user: i64) {
@@ -56,7 +59,10 @@ pub fn delete_reaction(conn: &PgConnection, message: i64, r: &String, user: i64)
             .filter(message_id.eq(message)),
     )
     .execute(conn)
-    .expect(&format!("Couldn't delete reaction in message {} in table", message));
+    .expect(&format!(
+        "Couldn't delete reaction in message {} in table",
+        message
+    ));
 }
 
 pub fn get_reactions(conn: &PgConnection, message_id: i64) -> HashMap<String, Vec<SavedReaction>> {

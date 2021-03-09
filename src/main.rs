@@ -20,7 +20,7 @@ async fn main() {
     dotenv().ok();
 
     let framework = StandardFramework::new()
-        .configure(|c| c.prefix("☭"))
+        .configure(|c| c.prefix("pah! "))
         .group(&GENERAL_GROUP);
 
     let token = env::var("DISCORD_TOKEN").expect("Expected a token in the environment");

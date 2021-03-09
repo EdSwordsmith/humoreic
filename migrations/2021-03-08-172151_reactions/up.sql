@@ -7,4 +7,5 @@ CREATE TABLE reactions (
     CONSTRAINT fk_message
       FOREIGN KEY(message_id) 
 	    REFERENCES messages(id)
+  ON DELETE CASCADE
 );

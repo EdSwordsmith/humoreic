@@ -18,8 +18,7 @@ pub fn establish_connection() -> PgPool {
     init_pool(&database_url).expect("Failed to create pool")
 }
 
-pub async fn get_db_connection(ctx: &Context) 
-    -> PgPooledConnection {
+pub async fn get_db_connection(ctx: &Context) -> PgPooledConnection {
     let data = ctx.data.read().await;
     let pool = data.get::<DBConnection>().unwrap();
     pool.get().unwrap()

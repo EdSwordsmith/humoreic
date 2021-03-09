@@ -7,9 +7,9 @@ use serenity::{
     prelude::*,
 };
 
-use crate::entities::{ admins::*, bans::*, guilds::*, messages::* };
-use serenity::model::id::ChannelId;
 use crate::database::get_db_connection;
+use crate::entities::{admins::*, bans::*, guilds::*, messages::*};
+use serenity::model::id::ChannelId;
 
 #[group]
 #[commands(ping, setup, admin, addadmin, ban, unban, del)]
