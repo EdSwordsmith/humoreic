@@ -32,7 +32,7 @@ fn create_embed(
     guild: &serenity::model::guild::Guild,
     guild_icon: &String,
 ) {
-    let image_regex = Regex::new(r"^((http(s?)://)([/|.|\w|\s|-])*\.(?:jpg|gif|png))$").unwrap();
+    let image_regex = Regex::new(r"^((http(s?)://)([^@|/|.|\w|\s|-])*\.(?:jpg|gif|png))$").unwrap();
 
     m.embed(|e| {
         if image_regex.is_match(&msg.content) {
@@ -141,10 +141,10 @@ impl EventHandler for Handler {
 
             for g in guilds {
                 let tenor_regex =
-                    Regex::new(r"^(http(s?)://)((tenor\.com.*)|(media\.giphy\.com.*)|(gph\.is.*))$")
+                    Regex::new(r"^(http(s?)://)((tenor\.com[^@]*)|(media\.giphy\.com[^@]*)|(gph\.is[^@]*))$")
                         .unwrap();
                 let video_regex =
-                    Regex::new(r"^((http(s?)://)([/|.|\w|\s|-])*\.(?:mp4|webm))$").unwrap();
+                    Regex::new(r"^((http(s?)://)([^@|/|.|\w|\s|-])*\.(?:mp4|webm))$").unwrap();
                 msg_ids.insert(g.id, vec![]);
 
                 let channel = ChannelId(g.channel_id as u64);
