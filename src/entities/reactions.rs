@@ -29,13 +29,13 @@ pub struct NewReaction {
 pub fn create_reaction(
     conn: &PgConnection,
     message_id: i64,
-    reaction: &String,
+    reaction: &str,
     user_id: i64,
     channel_id: i64,
 ) -> SavedReaction {
     let new_reaction = NewReaction {
         message_id,
-        reaction: (*reaction).clone(),
+        reaction: reaction.to_owned(),
         user_id,
         channel_id,
     };
@@ -49,7 +49,7 @@ pub fn create_reaction(
         ))
 }
 
-pub fn delete_reaction(conn: &PgConnection, message: i64, r: &String, user: i64) {
+pub fn delete_reaction(conn: &PgConnection, message: i64, r: &str, user: i64) {
     use crate::schema::reactions::dsl::*;
 
     diesel::delete(
@@ -94,12 +94,12 @@ pub fn get_reactions(conn: &PgConnection, message_id: i64) -> HashMap<String, Ve
             .push((*r).clone());
     }
 
-    return reactions_group;
+    reactions_group
 }
 
 pub fn has_reaction(
     reactions: &HashMap<String, Vec<SavedReaction>>,
-    reaction: &String,
+    reaction: &str,
     user_id: i64,
 ) -> bool {
     let reactions: Option<&Vec<SavedReaction>> = reactions.get(reaction);
@@ -116,7 +116,7 @@ pub fn has_reaction(
 
 pub fn reaction_actually_exists(
     reactions: &HashMap<String, Vec<SavedReaction>>,
-    reaction: &String,
+    reaction: &str,
     user_id: i64,
     channel_id: i64,
 ) -> bool {
