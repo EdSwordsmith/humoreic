@@ -84,14 +84,10 @@ pub fn get_reactions(conn: &PgConnection, message_id: i64) -> HashMap<String, Ve
 
     let mut reactions_group = HashMap::<String, Vec<SavedReaction>>::new();
     for r in reactions.iter() {
-        if !reactions_group.contains_key(&r.reaction) {
-            reactions_group.insert(r.reaction.clone(), Vec::new());
-        }
-
         reactions_group
-            .get_mut(&r.reaction)
-            .expect("Couldn't get mutex")
-            .push((*r).clone());
+            .entry(r.reaction.clone())
+            .or_default()
+            .push(r.clone());
     }
 
     reactions_group
