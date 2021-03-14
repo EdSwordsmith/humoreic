@@ -98,16 +98,14 @@ pub fn has_reaction(
     reaction: &str,
     user_id: i64,
 ) -> bool {
-    let reactions: Option<&Vec<SavedReaction>> = reactions.get(reaction);
-    if let Some(rs) = reactions {
-        for r in rs.iter() {
-            if r.user_id == user_id {
-                return true;
-            }
-        }
-    }
-
-    false
+    reactions.get(reaction)
+        .map(|reactions_vec|
+            reactions_vec
+                .iter()
+                .find(|r| r.user_id == user_id)
+                .is_some()
+        )
+        .unwrap_or(false)
 }
 
 pub fn reaction_actually_exists(
@@ -116,14 +114,12 @@ pub fn reaction_actually_exists(
     user_id: i64,
     channel_id: i64,
 ) -> bool {
-    let reactions: Option<&Vec<SavedReaction>> = reactions.get(reaction);
-    if let Some(rs) = reactions {
-        for r in rs.iter() {
-            if r.user_id == user_id && r.channel_id == channel_id {
-                return true;
-            }
-        }
-    }
-
-    false
+    reactions.get(reaction)
+        .map(|reactions_vec|
+            reactions_vec
+                .iter()
+                .find(|r| r.user_id == user_id && r.channel_id == channel_id)
+                .is_some()
+        )
+        .unwrap_or(false)
 }
