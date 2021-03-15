@@ -99,13 +99,12 @@ pub fn has_reaction(
     user_id: i64,
 ) -> bool {
     reactions.get(reaction)
-        .map(|reactions_vec|
+        .and_then(|reactions_vec|
             reactions_vec
                 .iter()
                 .find(|r| r.user_id == user_id)
-                .is_some()
         )
-        .unwrap_or(false)
+        .is_some()
 }
 
 pub fn reaction_actually_exists(
@@ -115,11 +114,10 @@ pub fn reaction_actually_exists(
     channel_id: i64,
 ) -> bool {
     reactions.get(reaction)
-        .map(|reactions_vec|
+        .and_then(|reactions_vec|
             reactions_vec
                 .iter()
                 .find(|r| r.user_id == user_id && r.channel_id == channel_id)
-                .is_some()
         )
-        .unwrap_or(false)
+        .is_some()
 }
