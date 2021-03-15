@@ -30,7 +30,7 @@ fn create_embed(
     m: &mut CreateMessage,
     msg: &Message,
     guild: &serenity::model::guild::Guild,
-    guild_icon: &String,
+    guild_icon: &str,
 ) {
     let image_regex = Regex::new(r"^((http(s?)://)([^@|/|.|\w|\s|-])*\.(?:jpg|gif|png))$").unwrap();
 
@@ -62,7 +62,7 @@ fn create_embed(
 async fn update_embeds(
     ctx: &Context,
     message: &SavedMessage,
-    guilds: &Vec<Guild>,
+    guilds: &[Guild],
     reactions: &HashMap<String, Vec<SavedReaction>>,
 ) {
     let embeds = message.embed_ids.as_object().unwrap();
@@ -86,18 +86,16 @@ async fn update_embeds(
         let mut sorted: Vec<_> = reactions.iter().map(|(k, v)| (k, v.len())).collect();
         sorted.sort_by_key(|a| a.1);
         sorted.reverse();
-        let mut i = 0;
 
-        for (re, v) in sorted.iter() {
+        for (i, (re, v)) in sorted.iter().enumerate() {
             if i % 10 == 0 {
                 text += "\n";
             }
 
             text += &format!(" {} {} ", v, re);
-            i += 1;
         }
 
-        if reactions.len() > 0 {
+        if !reactions.is_empty() {
             embed.field("Reactions", text, true);
         }
 
@@ -195,7 +193,7 @@ impl EventHandler for Handler {
 
             // Apagar mensagem depois de enviar a todos os servers
             // Caso não tenha enviado imagens/videos
-            if msg.attachments.len() == 0 {
+            if msg.attachments.is_empty() {
                 msg.delete(&ctx.http)
                     .await
                     .expect(&format!("Couldn't delete message {}", msg.id.0));

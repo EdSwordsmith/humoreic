@@ -29,13 +29,13 @@ pub struct NewReaction {
 pub fn create_reaction(
     conn: &PgConnection,
     message_id: i64,
-    reaction: &String,
+    reaction: &str,
     user_id: i64,
     channel_id: i64,
 ) -> SavedReaction {
     let new_reaction = NewReaction {
         message_id,
-        reaction: (*reaction).clone(),
+        reaction: reaction.to_owned(),
         user_id,
         channel_id,
     };
@@ -49,7 +49,7 @@ pub fn create_reaction(
         ))
 }
 
-pub fn delete_reaction(conn: &PgConnection, message: i64, r: &String, user: i64) {
+pub fn delete_reaction(conn: &PgConnection, message: i64, r: &str, user: i64) {
     use crate::schema::reactions::dsl::*;
 
     diesel::delete(
@@ -84,50 +84,40 @@ pub fn get_reactions(conn: &PgConnection, message_id: i64) -> HashMap<String, Ve
 
     let mut reactions_group = HashMap::<String, Vec<SavedReaction>>::new();
     for r in reactions.iter() {
-        if !reactions_group.contains_key(&r.reaction) {
-            reactions_group.insert(r.reaction.clone(), Vec::new());
-        }
-
         reactions_group
-            .get_mut(&r.reaction)
-            .expect("Couldn't get mutex")
-            .push((*r).clone());
+            .entry(r.reaction.clone())
+            .or_default()
+            .push(r.clone());
     }
 
-    return reactions_group;
+    reactions_group
 }
 
 pub fn has_reaction(
     reactions: &HashMap<String, Vec<SavedReaction>>,
-    reaction: &String,
+    reaction: &str,
     user_id: i64,
 ) -> bool {
-    let reactions: Option<&Vec<SavedReaction>> = reactions.get(reaction);
-    if let Some(rs) = reactions {
-        for r in rs.iter() {
-            if r.user_id == user_id {
-                return true;
-            }
-        }
-    }
-
-    false
+    reactions.get(reaction)
+        .and_then(|reactions_vec|
+            reactions_vec
+                .iter()
+                .find(|r| r.user_id == user_id)
+        )
+        .is_some()
 }
 
 pub fn reaction_actually_exists(
     reactions: &HashMap<String, Vec<SavedReaction>>,
-    reaction: &String,
+    reaction: &str,
     user_id: i64,
     channel_id: i64,
 ) -> bool {
-    let reactions: Option<&Vec<SavedReaction>> = reactions.get(reaction);
-    if let Some(rs) = reactions {
-        for r in rs.iter() {
-            if r.user_id == user_id && r.channel_id == channel_id {
-                return true;
-            }
-        }
-    }
-
-    false
+    reactions.get(reaction)
+        .and_then(|reactions_vec|
+            reactions_vec
+                .iter()
+                .find(|r| r.user_id == user_id && r.channel_id == channel_id)
+        )
+        .is_some()
 }

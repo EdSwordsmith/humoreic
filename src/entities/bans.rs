@@ -18,10 +18,7 @@ pub fn create_ban(conn: &PgConnection, user_id: i64) -> Ban {
 }
 
 pub fn is_banned(conn: &PgConnection, user_id: i64) -> bool {
-    match bans.find(user_id).first::<Ban>(conn) {
-        Ok(_) => true,
-        _ => false,
-    }
+    matches!(bans.find(user_id).first::<Ban>(conn), Ok(_))
 }
 
 pub fn rm_ban(conn: &PgConnection, user_id: i64) {

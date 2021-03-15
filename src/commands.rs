@@ -97,34 +97,32 @@ async fn unban(ctx: &Context, msg: &Message) -> CommandResult {
 #[command]
 async fn del(ctx: &Context, msg: &Message) -> CommandResult {
     let conn = get_db_connection(ctx).await;
-    let args: Vec<&str> = msg.content.split(" ").collect();
+    let args: Vec<&str> = msg.content.split(' ').collect();
 
-    if is_admin(&conn, msg.author.id.0 as i64) {
-        if args.len() >= 2 {
-            let message_id = args.get(1).unwrap().parse::<i64>()?;
-            let message = find_message(&conn, message_id, msg.guild_id.unwrap().0 as i64);
-            let guilds = get_guilds(&conn);
-            let embed_ids = message.embed_ids.as_object().unwrap();
-            let msg_ids = message.msg_ids.as_object().unwrap();
+    if is_admin(&conn, msg.author.id.0 as i64) && args.len() >= 2 {
+        let message_id = args.get(1).unwrap().parse::<i64>()?;
+        let message = find_message(&conn, message_id, msg.guild_id.unwrap().0 as i64);
+        let guilds = get_guilds(&conn);
+        let embed_ids = message.embed_ids.as_object().unwrap();
+        let msg_ids = message.msg_ids.as_object().unwrap();
 
-            for g in guilds {
-                let channel = ChannelId(g.channel_id as u64);
+        for g in guilds {
+            let channel = ChannelId(g.channel_id as u64);
+            channel
+                .delete_message(
+                    &ctx.http,
+                    embed_ids.get(&g.id.to_string()).unwrap().as_u64().unwrap(),
+                )
+                .await
+                .expect(&format!("Couldn't delete message {}", msg.id.0));
+            for v in msg_ids.get(&g.id.to_string()).unwrap().as_array().unwrap() {
                 channel
-                    .delete_message(
-                        &ctx.http,
-                        embed_ids.get(&g.id.to_string()).unwrap().as_u64().unwrap(),
-                    )
+                    .delete_message(&ctx.http, v.as_u64().unwrap())
                     .await
                     .expect(&format!("Couldn't delete message {}", msg.id.0));
-                for v in msg_ids.get(&g.id.to_string()).unwrap().as_array().unwrap() {
-                    channel
-                        .delete_message(&ctx.http, v.as_u64().unwrap())
-                        .await
-                        .expect(&format!("Couldn't delete message {}", msg.id.0));
-                }
             }
-            delete_message(&conn, message.id);
         }
+        delete_message(&conn, message.id);
     }
 
     Ok(())
