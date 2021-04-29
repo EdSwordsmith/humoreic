@@ -30,7 +30,7 @@ fn create_embed(
     m: &mut CreateMessage,
     msg: &Message,
     guild: &serenity::model::guild::Guild,
-    guild_icon: &String,
+    guild_icon: Option<String>,
 ) {
     let image_regex = Regex::new(r"^((http(s?)://)([^@|/|.|\w|\s|-])*\.(?:jpg|gif|png))$").unwrap();
 
@@ -50,8 +50,10 @@ fn create_embed(
 
         e.footer(|f| {
             f.text(&guild.name);
-            f.icon_url(&guild_icon);
-
+            if let Some(icon) = guild_icon {
+                f.icon_url(icon);
+            }
+            
             f
         });
 
@@ -149,10 +151,10 @@ impl EventHandler for Handler {
 
                 let channel = ChannelId(g.channel_id as u64);
                 let guild = msg.guild(&ctx.cache).await.unwrap();
-                let guild_icon = guild.icon_url().unwrap();
+                let guild_icon = guild.icon_url();
                 match channel
                     .send_message(&ctx.http, |m| {
-                        create_embed(m, &msg, &guild, &guild_icon);
+                        create_embed(m, &msg, &guild, guild_icon);
                         m
                     })
                     .await
