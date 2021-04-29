@@ -5,7 +5,7 @@ use serenity::{
     model::{
         channel::{Message, Reaction},
         gateway::{Activity, Ready},
-        id::{ChannelId, GuildId},
+        id::{ChannelId},
     },
     prelude::*,
 };
@@ -193,7 +193,7 @@ impl EventHandler for Handler {
                         match channel.say(&ctx.http, attachment.url).await {
                             Err(_) => eprintln!(
                                 "Couldn't send message to channel {} with guild {}",
-                                channel.0, guild.id.0
+                                channel.0, guild_id
                             ),
                             Ok(message) => {
                                 msg_ids.get_mut(&g.id).unwrap().push(message.id.0 as i64);
