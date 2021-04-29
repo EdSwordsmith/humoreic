@@ -5,7 +5,7 @@ use serenity::{
     model::{
         channel::{Message, Reaction},
         gateway::{Activity, Ready},
-        id::ChannelId,
+        id::{ChannelId, GuildId},
     },
     prelude::*,
 };
@@ -29,7 +29,7 @@ pub struct Handler;
 fn create_embed(
     m: &mut CreateMessage,
     msg: &Message,
-    guild: &serenity::model::guild::Guild,
+    guild_name: String,
     guild_icon: Option<String>,
 ) {
     let image_regex = Regex::new(r"^((http(s?)://)([^@|/|.|\w|\s|-])*\.(?:jpg|gif|png))$").unwrap();
@@ -49,11 +49,11 @@ fn create_embed(
         });
 
         e.footer(|f| {
-            f.text(&guild.name);
+            f.text(&guild_name);
             if let Some(icon) = guild_icon {
                 f.icon_url(icon);
             }
-            
+
             f
         });
 
@@ -150,18 +150,26 @@ impl EventHandler for Handler {
                 msg_ids.insert(g.id, vec![]);
 
                 let channel = ChannelId(g.channel_id as u64);
-                let guild = msg.guild(&ctx.cache).await.unwrap();
-                let guild_icon = guild.icon_url();
+                
+                let guild = msg.guild(&ctx.cache).await;
+                let mut guild_icon: Option<String>;
+                let mut guild_name = String::from("O server dos caloiros quer bugar, então que bugue caralho");
+
+                if let Some(g) = guild {
+                    guild_icon = g.icon_url();
+                    guild_name = g.name;
+                }
+
                 match channel
                     .send_message(&ctx.http, |m| {
-                        create_embed(m, &msg, &guild, guild_icon);
+                        create_embed(m, &msg, guild_name, guild_icon);
                         m
                     })
                     .await
                 {
                     Err(_) => eprintln!(
                         "Couldn't send message to channel {} with guild {}",
-                        channel.0, guild.id.0
+                        channel.0, guild_id
                     ),
                     Ok(message) => {
                         embed_ids.insert(g.id, message.id.0 as i64);
@@ -172,7 +180,7 @@ impl EventHandler for Handler {
                     match channel.say(&ctx.http, &msg.content).await {
                         Err(_) => eprintln!(
                             "Couldn't send message to channel {} with guild {}",
-                            channel.0, guild.id.0
+                            channel.0, guild_id
                         ),
                         Ok(message) => {
                             msg_ids.get_mut(&g.id).unwrap().push(message.id.0 as i64);
