@@ -30,7 +30,7 @@ fn create_embed(
     m: &mut CreateMessage,
     msg: &Message,
     guild_name: String,
-    guild_icon: Option<String>,
+    guild_icon: &Option<String>,
 ) {
     let image_regex = Regex::new(r"^((http(s?)://)([^@|/|.|\w|\s|-])*\.(?:jpg|gif|png))$").unwrap();
 
@@ -152,7 +152,7 @@ impl EventHandler for Handler {
                 let channel = ChannelId(g.channel_id as u64);
                 
                 let guild = msg.guild(&ctx.cache).await;
-                let mut guild_icon: Option<String>;
+                let mut guild_icon = Option::None;
                 let mut guild_name = String::from("O server dos caloiros quer bugar, então que bugue caralho");
 
                 if let Some(g) = guild {
@@ -162,7 +162,7 @@ impl EventHandler for Handler {
 
                 match channel
                     .send_message(&ctx.http, |m| {
-                        create_embed(m, &msg, guild_name, guild_icon);
+                        create_embed(m, &msg, guild_name, &guild_icon);
                         m
                     })
                     .await
