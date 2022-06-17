@@ -12,7 +12,7 @@ edition = "2018"
 [dependencies]
 serde_json = "1.0.64"
 serenity = { version = "0.10.4", default-features = false, features = ["client", "gateway", "rustls_backend", "model", "standard_framework", "cache"] }
-tokio = { version = "1.0", features = ["macros", "rt-multi-thread"] }
+tokio = { version = "1.8", features = ["macros", "rt-multi-thread"] }
 diesel = { version = "1.4.4", features = ["postgres", "r2d2", "serde_json"] }
 dotenv = "0.15.0"
 regex = "1.4.3"
